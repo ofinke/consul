@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-critic = "consul.tools.critic:main"
+critic = "consul.cli_tools.critic:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -21,6 +21,7 @@ core = [
     "langchain-ollama>=0.3.0",
     "langchain>=0.3.21",
     "langgraph>=0.3.18",
+    "pyyaml>=6.0.2",
 ]
 dev = [
     "ruff>=0.11.2",

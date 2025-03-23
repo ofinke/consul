@@ -107,7 +107,7 @@ wheels = [
 
 [[package]]
 name = "consul"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "." }
 
 [package.dev-dependencies]
@@ -115,6 +115,7 @@ core = [
     { name = "langchain" },
     { name = "langchain-ollama" },
     { name = "langgraph" },
+    { name = "pyyaml" },
 ]
 dev = [
     { name = "ruff" },
@@ -130,6 +131,7 @@ core = [
     { name = "langchain", specifier = ">=0.3.21" },
     { name = "langchain-ollama", specifier = ">=0.3.0" },
     { name = "langgraph", specifier = ">=0.3.18" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
 ]
 dev = [{ name = "ruff", specifier = ">=0.11.2" }]
 tools = [{ name = "yaspin", specifier = ">=3.1.0" }]

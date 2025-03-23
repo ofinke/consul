@@ -1,5 +1,7 @@
 import argparse
 
+# TODO: redo the interface from argparse to click 
+# https://click.palletsprojects.com/en/stable/
 
 def create_parser_critic() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(

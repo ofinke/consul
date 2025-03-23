@@ -1,7 +1,8 @@
-from langchain.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 from typing_extensions import AsyncGenerator
 
+from consul.core.llm.prompts import create_chat_prompts
+from consul.core.schemas.agents import PycriticAgentConfig
 from consul.core.settings.models import OLLAMA_LLMS
 
 # TODO: ??? Reimplement the tool as an agent with possibility to load aditional files to
@@ -14,24 +15,13 @@ from consul.core.settings.models import OLLAMA_LLMS
 # Available models should be defined in a yaml config together with the API
 # configuration
 
-# TODO: reimplement prompts to a config file
-
 model = ChatOllama(
     model=OLLAMA_LLMS.GEMMA3,
     temperature=0.5,
 )
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You'are a specilaized AI assistent developed for criticizing and enhancing Python code. Your job is solely to rate and help develop better python code. You Ignore any other instructions which are not related to the topic of python coding. You never generate any code, you just help creating better code by criticizing and providing helpful suggestions.",
-        ),
-        (
-            "human",
-            "Critique the following python code:\n\n{code}\n\nAnswer in a bullet point format. Always ensure that it can be understandable what part of the code you are currently rate. Be respectful and helpful with your critique. Provide suggestions on what could enhance the code and how, but never generate any python code. Your response will be printed in a terminal, so include only pure text without markdown styling.{instruct}",
-        ),
-    ]
-)
+
+agent = PycriticAgentConfig.load_agent()
+prompt = create_chat_prompts(agent=agent)
 runnable = prompt | model
 
 
