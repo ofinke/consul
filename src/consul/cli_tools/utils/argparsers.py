@@ -1,22 +1,27 @@
-import argparse
+from collections.abc import Callable
 
-# TODO: redo the interface from argparse to click 
-# https://click.palletsprojects.com/en/stable/
+import click
+from pydantic import BaseModel
 
-def create_parser_critic() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Process a file with given instructions. -p / --path = relative or full path to a file."
-    )
-    # Add the -p --path argument
-    parser.add_argument(
+
+class CliArgsCritic(BaseModel):
+    path: str
+    instruct: str = ""
+
+
+def cli_args_critic(func: Callable[[CliArgsCritic], None]) -> Callable[..., None]:
+    """Wrapper defining input parameters for CLI implementation fro pycritic."""
+
+    # Define click commands according to the equivalent pydantic model
+    @click.command()
+    @click.option(
         "-p",
         "--path",
         type=str,
         required=True,
         help="Relative path to the file",
     )
-    # Add the -i --instruct argument
-    parser.add_argument(
+    @click.option(
         "-i",
         "--instruct",
         type=str,
@@ -24,4 +29,8 @@ def create_parser_critic() -> argparse.ArgumentParser:
         default="",
         help="Additional instructions for the LLM",
     )
-    return parser
+    def wrapper(path: str, instruct: str) -> CliArgsCritic:
+        args = CliArgsCritic(path=path, instruct=instruct)
+        func(args)
+
+    return wrapper

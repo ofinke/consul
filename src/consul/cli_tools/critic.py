@@ -1,14 +1,13 @@
 import asyncio
-from argparse import Namespace
 
 from yaspin import yaspin
 
-from consul.cli_tools.utils.argparsers import create_parser_critic
+from consul.cli_tools.utils.argparsers import CliArgsCritic, cli_args_critic
 from consul.core.agents.pycritic.agent import acall_agent
 from consul.core.modules.files.load import load_file_content
 
 
-async def runtime(args: Namespace) -> None:
+async def runtime(args: CliArgsCritic) -> None:
     """
     LLM Critic for a CLI interace.
 
@@ -48,11 +47,9 @@ async def runtime(args: Namespace) -> None:
         spinner.stop()
         raise RuntimeError(msg) from e
 
-
-def main() -> None:
+@cli_args_critic
+def main(args: CliArgsCritic) -> None:
     """CLI implementation of the LLM Python critic."""
-    parser = create_parser_critic()
-    args = parser.parse_args()
     asyncio.run(runtime(args=args))
 
 

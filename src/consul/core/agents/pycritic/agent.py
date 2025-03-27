@@ -20,9 +20,9 @@ model = ChatOllama(
     temperature=0.5,
 )
 
-agent = PycriticAgentConfig.load_agent()
-prompt = create_chat_prompts(agent=agent)
-runnable = prompt | model
+# agent = PycriticAgentConfig.load_agent()
+# prompt = create_chat_prompts(agent=agent)
+runnable = model
 
 
 async def acall_agent(data: str, instruct: str) -> AsyncGenerator[str, None]:
