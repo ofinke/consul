@@ -1,13 +1,12 @@
-import os
 from enum import Enum
+from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
-from consul.core.schemas.prompts import ChatTurn
+# Assuming ChatTurn is defined somewhere in your project
+from consul.core.schemas.prompts import ChatTurn  # Adjust the import path as necessary
 
-# TODO: This approach doesn't work as the cls.name cannot access the .name, look into
-# how to fix this while keeping it elegant.
 
 class AvailableAgents(Enum):
     PYCRITIC = "pycritic"
@@ -17,29 +16,32 @@ class BaseAgentConfig(BaseModel):
     name: AvailableAgents
     prompt_history: list[ChatTurn]
 
+    @model_validator(mode="before")
     @classmethod
-    def load_agent(cls: type["BaseAgentConfig"]) -> "BaseAgentConfig":
+    def load_agent(
+        cls: type["BaseAgentConfig"],
+        data: any,
+    ) -> "BaseAgentConfig":
         """Load an agent configuration from a YAML file."""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # Use the value of the 'name' attribute to determine the config file name
-        config_filename = f"{cls.name.value}.yaml"
-        config_path = os.path.join(script_dir, "..", "configs", "prompts", config_filename)
-        
+        # Get the config location relative to this file location
+        pdir = Path(__file__).resolve().parent
+        cfgpath = pdir.parents[3] / "configs" / "agents" / f"{data['name'].value}.yaml"
+        # load it
         try:
-            with open(config_path, "r") as file:
+            with Path.open(cfgpath, "r") as file:
                 data = yaml.safe_load(file)
-            return cls(**data)
-        except FileNotFoundError:
-            raise ValueError(f"Configuration file not found: {config_path}")
+        # handle exceptions
+        except FileNotFoundError as e:
+            msg = f"Config for {data['name'].name} not found at: {cfgpath}"
+            raise ValueError(msg) from e
         except yaml.YAMLError as e:
-            raise ValueError(f"Error parsing YAML: {e}")
+            msg = f"Error parsing YAML: {e}"
+            raise ValueError(msg) from e
+        # return data for evaluation
+        else:
+            return data
 
 
-class PycriticAgentConfig(BaseAgentConfig):
-    name: AvailableAgents = AvailableAgents.PYCRITIC
-
-
-# Example usage
 if __name__ == "__main__":
-    config = PycriticAgentConfig.load_agent()
+    config = BaseAgentConfig(name=AvailableAgents.PYCRITIC)
     print(config)

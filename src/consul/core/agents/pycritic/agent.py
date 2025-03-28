@@ -2,7 +2,7 @@ from langchain_ollama import ChatOllama
 from typing_extensions import AsyncGenerator
 
 from consul.core.llm.prompts import create_chat_prompts
-from consul.core.schemas.agents import PycriticAgentConfig
+from consul.core.schemas.agents import AvailableAgents, BaseAgentConfig
 from consul.core.settings.models import OLLAMA_LLMS
 
 # TODO: ??? Reimplement the tool as an agent with possibility to load aditional files to
@@ -20,9 +20,9 @@ model = ChatOllama(
     temperature=0.5,
 )
 
-# agent = PycriticAgentConfig.load_agent()
-# prompt = create_chat_prompts(agent=agent)
-runnable = model
+agent = BaseAgentConfig(name=AvailableAgents.PYCRITIC)
+prompt = create_chat_prompts(agent=agent)
+runnable = model | prompt
 
 
 async def acall_agent(data: str, instruct: str) -> AsyncGenerator[str, None]:
