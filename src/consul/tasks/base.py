@@ -5,15 +5,16 @@ from loguru import logger
 from pydantic import BaseModel
 
 
-class TaskInput(BaseModel):
+class BaseTaskInput(BaseModel):
     """Base input schema - tasks should subclass this."""
 
 
-class TaskOutput(BaseModel):
+class BaseTaskOutput(BaseModel):
     """Base output schema - tasks should subclass this."""
+    llm_response: str
 
 
-class TaskMetadata(BaseModel):
+class BaseTaskMetadata(BaseModel):
     """Metadata about the task."""
 
     name: str
@@ -33,17 +34,17 @@ class BaseTask(ABC):
     # Core abstractions - must implement
     @property
     @abstractmethod
-    def metadata(self) -> TaskMetadata:
+    def metadata(self) -> BaseTaskMetadata:
         """Task metadata."""
 
     @property
     @abstractmethod
-    def input_schema(self) -> "TaskInput":
+    def input_schema(self) -> BaseTaskInput:
         """Input schema for this task."""
 
     @property
     @abstractmethod
-    def output_schema(self) -> "TaskOutput":
+    def output_schema(self) -> BaseTaskOutput:
         """Output schema for this task."""
 
     @abstractmethod
@@ -51,39 +52,44 @@ class BaseTask(ABC):
         """Build the LangGraph graph for this task."""
 
     # Common interface
-    def execute(self, input_data: dict[str, any]) -> dict[str, any]:
+    def execute(self, input_data: dict[str, any]) -> BaseTaskOutput:
         """Execute the task with given input."""
+        # inform about execution
+        logger.info(f"Executing task: '{self.metadata.name}'")
+
         # Validate input
         validated_input = self.input_schema(**input_data)
-
-        # inform about execution
-        logger.debug(f"Executing task '{self.metadata.name}'")
+        logger.debug(f"Task '{self.metadata.name}' input {validated_input=}")
 
         # Get or build graph
         if self._compiled_graph is None:
             self._graph = self.build_graph()
             self._compiled_graph = self._graph.compile()
+            logger.debug(f"Task '{self.metadata.name}' graph edges: {self._graph.edges}")
+            logger.debug(f"Task '{self.metadata.name}' graph nodes: {self._graph.nodes}")
 
         # Execute
         result = self._compiled_graph.invoke(validated_input.dict())
+        logger.debug(f"Task '{self.metadata.name}' graph result: {result}")
 
-        # Validate output
-        validated_output = self.output_schema(**result)
+        # return validated output
+        return self.output_schema(**result)
 
-        return validated_output.dict()
-
-    async def aexecute(self, input_data: dict[str, any]) -> dict[str, any]:
+    async def aexecute(self, input_data: dict[str, any]) -> BaseTaskOutput:
         """Async version of execute."""
+        logger.info(f"Async executing task: '{self.metadata.name}'")
         validated_input = self.input_schema(**input_data)
 
         if self._compiled_graph is None:
             self._graph = self.build_graph()
             self._compiled_graph = self._graph.compile()
+            logger.debug(f"Task '{self.metadata.name}' graph edges: {self._graph.edges}")
+            logger.debug(f"Task '{self.metadata.name}' graph nodes: {self._graph.nodes}")
 
         result = await self._compiled_graph.ainvoke(validated_input.dict())
-        validated_output = self.output_schema(**result)
+        logger.debug(f"Task '{self.metadata.name}' graph result: {result}")
 
-        return validated_output.dict()
+        return self.output_schema(**result)
 
 
 class SimpleBaseTask(BaseTask):
