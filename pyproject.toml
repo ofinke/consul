@@ -11,10 +11,11 @@ dependencies = [
     "langchain>=0.3.21",
     "langchain-ollama>=0.3.0",
     "langgraph>=0.3.18",
+    "loguru>=0.7.3",
 ]
 
 [project.scripts]
-critic = "consul.cli_tools.critic:main"
+consul = "consul.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
