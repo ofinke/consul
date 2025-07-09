@@ -1,15 +1,24 @@
 import click
 from loguru import logger
+from loguru._handler import Message
+
+COLOR_MAP = {
+    "DEBUG": "blue",
+    "INFO": "white",
+    "SUCCESS": "green",
+    "WARNING": "yellow",
+    "ERROR": "red",
+    "CRITICAL": "red",
+}
 
 
-class ClickHandler:
-    """Custom loguru handler that uses click.echo for output."""
-
-    def __init__(self, level: str = "INFO", *, use_colors: bool = True):
+class LoguruHandler:
+    def __init__(self, level: str = "INFO", *, use_colors: bool = True) -> None:
+        """Custom loguru handler that uses click.echo for output."""
         self.level = level
         self.use_colors = use_colors
 
-    def write(self, message):
+    def write(self, message: Message) -> None:
         """Handler function for loguru."""
         record = message.record
 
@@ -22,7 +31,7 @@ class ClickHandler:
         else:
             click.echo(formatted, color=self.use_colors)
 
-    def _format_message(self, record) -> str:
+    def _format_message(self, record: dict) -> str:
         """Format log message for click output."""
         level = record["level"].name
         message = record["message"]
@@ -30,22 +39,12 @@ class ClickHandler:
         if not self.use_colors:
             return f"[{level}] {message}"
 
-        # Color mapping for different log levels
-        color_map = {
-            "DEBUG": "blue",
-            "INFO": "white",
-            "SUCCESS": "green",
-            "WARNING": "yellow",
-            "ERROR": "red",
-            "CRITICAL": "red",
-        }
-
-        color = color_map.get(level, "white")
+        color = COLOR_MAP.get(level, "white")
         return click.style(f"[{level}] {message}", fg=color)
 
 
 # Usage example
-def setup_logging(*, verbose: bool = False, quiet: bool = False) -> None:
+def setup_loguru_intercept(*, verbose: bool = False, quiet: bool = False) -> None:
     """Setup logging configuration."""
     # Remove default handler
     logger.remove()
@@ -59,5 +58,5 @@ def setup_logging(*, verbose: bool = False, quiet: bool = False) -> None:
         level = "INFO"
 
     # Add click handler for CLI output
-    click_handler = ClickHandler(level=level)
+    click_handler = LoguruHandler(level=level)
     logger.add(click_handler.write, level=level, format="{message}")

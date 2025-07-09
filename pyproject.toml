@@ -10,8 +10,10 @@ requires-python = ">=3.12"
 dependencies = [
     "langchain>=0.3.21",
     "langchain-ollama>=0.3.0",
+    "langchain-openai>=0.3.27",
     "langgraph>=0.3.18",
     "loguru>=0.7.3",
+    "pydantic-settings>=2.10.1",
 ]
 
 [project.scripts]
