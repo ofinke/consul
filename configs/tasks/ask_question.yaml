@@ -1,0 +1,15 @@
+name: ask_question
+description: "Ask LLM a question."
+version: "1.0.0"
+tags: 
+  - "question"
+  - "llm"
+
+# llm configuration
+llm_name: "gpt-4.1"
+llm_params: 
+  temperature: 0
+  max_tokens: 512
+  timeout: 30
+
+# prompts

@@ -2,10 +2,10 @@
 
 from langchain_openai import AzureChatOpenAI
 
+from consul.core.config.tasks import BaseTaskConfig
 from consul.core.settings import settings
 from consul.tasks.base import (
     BaseTaskInput,
-    BaseTaskMetadata,
     BaseTaskOutput,
     SimpleBaseTask,
 )
@@ -18,17 +18,16 @@ class AskTask(SimpleBaseTask):
         """Task input data format."""
 
         text: str
-        max_length: int | None = None
 
     class Output(BaseTaskOutput):
         """Task output data format."""
 
     @property
-    def metadata(self) -> BaseTaskMetadata:
-        return BaseTaskMetadata(
+    def config(self) -> BaseTaskConfig:
+        return BaseTaskConfig(
             name="ask_question",
-            description="Ask a question to a LLM.",
-            tags=["text", "question", "llm"],
+            description="Ask LLM a question.",
+            tags=["question", "llm"],
         )
 
     @property
@@ -45,10 +44,16 @@ class AskTask(SimpleBaseTask):
         return f"Answer the following question:\n\n{text}\n\n"
 
     def get_llm(self):
-        return AzureChatOpenAI(model="gpt-4.1", **settings.azure.get_credentials())
+        return AzureChatOpenAI(
+            model=self.config.llm_name,
+            **settings.azure.get_credentials(),
+            **self.config.llm_params.model_dump()
+        )
 
     def process_llm_response(
-        self, response: str, state: dict[str, any]
+        self,
+        response: str,
+        _: dict[str, any],
     ) -> dict[str, any]:
         return {
             "llm_response": response.strip(),

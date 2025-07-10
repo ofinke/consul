@@ -22,7 +22,7 @@ def main(*, verbose: bool, quiet: bool, message: str) -> None:
         }
     )
 
-    click.echo(f"\nLLM Answer:\n\n{result.llm_response}")
+    click.echo(f"---\nLLM Answer:\n\n{result.llm_response}\n---")
 
 
 if __name__ == "__main__":
