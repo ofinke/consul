@@ -13,8 +13,8 @@ class BaseTaskInput(BaseModel):
     """Base input schema - tasks should subclass this."""
 
 
-class BaseTaskOutput(BaseModel):
-    """Base output schema - tasks should subclass this."""
+class BaseGraphState(BaseModel):
+    """Base state of the langgraph graph."""
 
     history: list[ChatTurn]
 
@@ -39,22 +39,22 @@ class BaseTask(ABC):
 
     @property
     @abstractmethod
-    def output_schema(self) -> BaseTaskOutput:
-        """Output schema for this task."""
+    def state_schema(self) -> BaseGraphState:
+        """Output schema for task state."""
 
     @abstractmethod
     def build_graph(self) -> StateGraph:
         """Build the LangGraph graph for this task."""
 
     # Common interface
-    def execute(self, input_data: dict[str, any]) -> BaseTaskOutput:
+    def execute(self, input_data: dict[str, any]) -> BaseGraphState:
         """Execute the task with given input."""
         # inform about execution
         logger.info(f"Executing task: '{self.config.name}'")
 
         # Validate input
         validated_input = self.input_schema(**input_data)
-        logger.debug(f"Task '{self.config.name}' input {validated_input=}")
+        logger.debug(f"Task '{self.config.name}' {validated_input=}")
 
         # Get or build graph
         if self._compiled_graph is None:
@@ -65,15 +65,18 @@ class BaseTask(ABC):
 
         # Execute
         result = self._compiled_graph.invoke(validated_input.dict())
-        logger.debug(f"Task '{self.config.name}' graph result: {result}")
 
         # return validated output
-        return self.output_schema(**result)
+        return self.state_schema(**result)
 
-    async def aexecute(self, input_data: dict[str, any]) -> BaseTaskOutput:
+    async def aexecute(self, input_data: dict[str, any]) -> BaseGraphState:
         """Async version of execute."""
+        # inform about execution
         logger.info(f"Async executing task: '{self.config.name}'")
+
+        # Validate input
         validated_input = self.input_schema(**input_data)
+        logger.debug(f"Task '{self.config.name}' {validated_input=}")
 
         if self._compiled_graph is None:
             self._graph = self.build_graph()
@@ -81,17 +84,18 @@ class BaseTask(ABC):
             logger.debug(f"Task '{self.config.name}' graph edges: {self._graph.edges}")
             logger.debug(f"Task '{self.config.name}' graph nodes: {self._graph.nodes}")
 
+        # Execute
         result = await self._compiled_graph.ainvoke(validated_input.dict())
-        logger.debug(f"Task '{self.config.name}' graph result: {result}")
 
-        return self.output_schema(**result)
+        # return validated output
+        return self.state_schema(**result)
 
 
 class SimpleBaseTask(BaseTask):
     """Base for simple single-pass LLM tasks."""
 
     @abstractmethod
-    def create_prompt_history(self) -> ChatPromptTemplate:
+    def create_prompt(self) -> ChatPromptTemplate:
         """Create the prompt for the LLM call."""
 
     @abstractmethod
@@ -99,18 +103,19 @@ class SimpleBaseTask(BaseTask):
         """Get the LLM instance to use."""
 
     def process_llm_response(
-        self, response: str, state: dict[str, any]
-    ) -> dict[str, any]:
-        """Process LLM response - override if needed."""
-        state["llm_response"] = response
-        return state
+        self, response: str, state: BaseGraphState
+    ) -> BaseGraphState:
+        """Includes latest AI message in the BaseGraphState."""
+        return BaseGraphState(
+            history=[*state.history, ChatTurn(side="ai", text=response.strip())]
+        )
 
     def build_graph(self) -> StateGraph:
-        """Default graph: prompt -> LLM -> process."""
-        graph = StateGraph(dict)
+        """Default graph: create prompt -> call LLM -> process the answer."""
+        graph = StateGraph(self.state_schema)
 
-        def llm_node(state):
-            prompt = self.create_prompt_history(state)
+        def llm_node(state: BaseGraphState) -> BaseGraphState:
+            prompt = self.create_prompt(state)
             llm = self.get_llm()
             response = (prompt | llm).invoke({})
             return self.process_llm_response(response.content, state)

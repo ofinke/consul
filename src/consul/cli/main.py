@@ -1,4 +1,5 @@
 import click
+from loguru import logger
 
 from consul.cli.logging.base import setup_loguru_intercept
 from consul.core.config.base import ChatTurn
@@ -61,7 +62,7 @@ def main(*, verbose: bool, quiet: bool) -> None:
                 click.echo(f"\nAssistant: {result.history[-1].text}")
 
             except Exception as e:  # noqa: BLE001
-                click.echo(f"\nError: Failed to get response - {e!s}", err=True)
+                logger.exception(f"Failed to get response: {e!s}")
                 # Remove the last user message if processing failed
                 if memory and memory[-1].side == "human":
                     memory.pop()
