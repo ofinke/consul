@@ -1,5 +1,6 @@
 # Next steps
 
+- Polish the CLI slightly / merge to dev
 - Implement Base class for agents
   - Should contain loop, look how it is implemented in laggraph
 - Implement basic tools for agents
