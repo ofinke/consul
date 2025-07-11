@@ -15,7 +15,7 @@ from consul.tasks.base import (
 )
 
 
-class AskTask(SimpleBaseTask):
+class ChatTask(SimpleBaseTask):
     """Ask LLM a question."""
 
     class Input(BaseTaskInput):
@@ -28,7 +28,7 @@ class AskTask(SimpleBaseTask):
 
     @property
     def config(self) -> BaseTaskConfig:
-        return get_task_config(AvailableTasks.ASK)
+        return get_task_config(AvailableTasks.CHAT)
 
     @property
     def input_schema(self) -> BaseTaskInput:

@@ -10,7 +10,7 @@ from consul.core.config.base import ChatTurn
 
 
 class AvailableTasks(Enum):
-    ASK = "ask_question"
+    CHAT = "chat"
     TEST = "test"
 
 

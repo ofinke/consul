@@ -2,7 +2,7 @@ import click
 
 from consul.cli.logging.base import setup_loguru_intercept
 from consul.core.config.base import ChatTurn
-from consul.tasks.ask import AskTask
+from consul.tasks.chat import ChatTask
 
 
 @click.command()
@@ -13,11 +13,10 @@ def main(*, verbose: bool, quiet: bool) -> None:
     setup_loguru_intercept(verbose=verbose, quiet=quiet)
 
     # Initialize conversation
-    task = AskTask()
+    task = ChatTask()
     memory: list[ChatTurn] = []
 
     # Welcome message
-    click.echo("=" * 50)
     click.echo("")
     click.echo(r"   ____                      _ ")
     click.echo(r"  / ___|___  _ __  ___ _   _| |")
@@ -25,9 +24,10 @@ def main(*, verbose: bool, quiet: bool) -> None:
     click.echo(r" | |__| (_) | | | \__ \ |_| | |")
     click.echo(r"  \____\___/|_| |_|___/\__,_|_|")
     click.echo("")
-    click.echo("Welcome to the Consul CLI!")
+    click.echo("Welcome to the Consul CLI! Consul is a set of LLM task/agents designed")
+    click.echo("to help with simple problems. It is a hobby project :)")
     click.echo("Type '/quit', '/exit', or press Ctrl+C to end the conversation.")
-    click.echo("=" * 50)
+    click.echo("-" * 76)
 
     try:
         while True:
@@ -70,9 +70,8 @@ def main(*, verbose: bool, quiet: bool) -> None:
         pass
 
     # Goodbye message
-    click.echo("\n" + "=" * 50)
-    click.echo("Thanks for chatting! Goodbye!")
-    click.echo("=" * 50)
+    click.echo("\n\nTurning off!")
+    click.echo("-" * 76)
 
 
 if __name__ == "__main__":

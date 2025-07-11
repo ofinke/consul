@@ -1,8 +1,8 @@
-name: ask_question
-description: "Ask LLM a question."
+name: chat
+description: "Chat with a LLM."
 version: "1.0.0"
 tags: 
-  - "question"
+  - "chat"
   - "llm"
 
 # llm configuration
