@@ -1,8 +1,12 @@
-# TODO: redo this just for a simple ask a LLM task, which will be default entrypoint
-
+from langchain.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI
 
-from consul.core.config.tasks import BaseTaskConfig
+from consul.core.config.tasks import (
+    AvailableTasks,
+    BaseTaskConfig,
+    ChatTurn,
+    get_task_config,
+)
 from consul.core.settings import settings
 from consul.tasks.base import (
     BaseTaskInput,
@@ -17,18 +21,14 @@ class AskTask(SimpleBaseTask):
     class Input(BaseTaskInput):
         """Task input data format."""
 
-        text: str
+        history: list[ChatTurn]
 
     class Output(BaseTaskOutput):
         """Task output data format."""
 
     @property
     def config(self) -> BaseTaskConfig:
-        return BaseTaskConfig(
-            name="ask_question",
-            description="Ask LLM a question.",
-            tags=["question", "llm"],
-        )
+        return get_task_config(AvailableTasks.ASK)
 
     @property
     def input_schema(self) -> BaseTaskInput:
@@ -38,23 +38,24 @@ class AskTask(SimpleBaseTask):
     def output_schema(self) -> BaseTaskOutput:
         return self.Output
 
-    def create_prompt(self, state: dict[str, any]) -> str:
-        text = state["text"]
-
-        return f"Answer the following question:\n\n{text}\n\n"
+    def create_prompt_history(self, state: dict[str, any]) -> ChatPromptTemplate:
+        config_history = [turn.dump_tuple() for turn in self.config.prompt_history]
+        user_history = [(turn["side"], turn["text"]) for turn in state["history"]]
+        return ChatPromptTemplate(config_history + user_history)
 
     def get_llm(self):
         return AzureChatOpenAI(
             model=self.config.llm_name,
             **settings.azure.get_credentials(),
-            **self.config.llm_params.model_dump()
+            **self.config.llm_params.model_dump(),
         )
 
     def process_llm_response(
         self,
         response: str,
-        _: dict[str, any],
-    ) -> dict[str, any]:
+        state: dict[str, any],
+    ) -> list[ChatTurn]:
+        user_history = [ChatTurn(**turn) for turn in state["history"]]
         return {
-            "llm_response": response.strip(),
+            "history": [*user_history, ChatTurn(side="ai", text=response.strip())]
         }

@@ -13,3 +13,7 @@ llm_params:
   timeout: 30
 
 # prompts
+prompt_history:
+  - side: system
+    text: |
+      You'are a capable and trutful AI assistant. You answer questions. You don't use any formatting of text (no markdown or other styles) and you keep your answers short.

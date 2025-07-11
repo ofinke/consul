@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 
+from langchain.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph
 from loguru import logger
 from pydantic import BaseModel
 
+from consul.core.config.base import ChatTurn
 from consul.core.config.tasks import BaseTaskConfig
 
 
@@ -14,7 +16,7 @@ class BaseTaskInput(BaseModel):
 class BaseTaskOutput(BaseModel):
     """Base output schema - tasks should subclass this."""
 
-    llm_response: str
+    history: list[ChatTurn]
 
 
 class BaseTask(ABC):
@@ -89,7 +91,7 @@ class SimpleBaseTask(BaseTask):
     """Base for simple single-pass LLM tasks."""
 
     @abstractmethod
-    def create_prompt(self, state: dict[str, any]) -> str:
+    def create_prompt_history(self) -> ChatPromptTemplate:
         """Create the prompt for the LLM call."""
 
     @abstractmethod
@@ -108,9 +110,9 @@ class SimpleBaseTask(BaseTask):
         graph = StateGraph(dict)
 
         def llm_node(state):
-            prompt = self.create_prompt(state)
+            prompt = self.create_prompt_history(state)
             llm = self.get_llm()
-            response = llm.invoke(prompt)
+            response = (prompt | llm).invoke({})
             return self.process_llm_response(response.content, state)
 
         graph.add_node("llm_call", llm_node)
