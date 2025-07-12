@@ -1,3 +1,9 @@
+# Shortterm
+
+- Probably migrate the ChatTurn to BaseMessage to unify it if I want to use langgraph ecosystem
+- Go through the BaseAgentFlow and ReAct agent to unify it as much with ChatTask.
+
+
 # Next steps
 
 - Polish the CLI slightly / merge to dev

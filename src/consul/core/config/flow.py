@@ -9,9 +9,10 @@ from pydantic import BaseModel
 from consul.core.config.base import ChatTurn
 
 
-class AvailableTasks(Enum):
+class AvailableFlow(Enum):
     CHAT = "chat"
     TEST = "test"
+    DOCS = "docs"
 
 
 class LLMParameters(BaseModel):
@@ -20,7 +21,7 @@ class LLMParameters(BaseModel):
     timeout: int = 30
 
 
-class BaseTaskConfig(BaseModel):
+class BaseFlowConfig(BaseModel):
     # task metadata
     name: str
     description: str
@@ -36,21 +37,22 @@ class BaseTaskConfig(BaseModel):
 
 
 @lru_cache(maxsize=100)
-def get_task_config(task: AvailableTasks) -> BaseTaskConfig:
+def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
     """Retrieve configuration for specific task."""
     config_mapping = {}
 
     # try to load data from default config
     try:
-        path = Path(__file__).parent / f"../../../../configs/tasks/{task.value}.yaml"
+        path = Path(__file__).parent / f"../../../../configs/{task.value}.yaml"
         path = path.resolve()
         with Path.open(path, "r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
+        logger.debug(f"Loaded config for '{task.value}' from YAML file.")
     except FileNotFoundError as e:
         msg = f"Default config for {task.value} not found: {e!s}"
         logger.error(msg)
         raise FileNotFoundError(msg) from e
 
     # return evaluated model
-    used_model = config_mapping.get(task, BaseTaskConfig)
+    used_model = config_mapping.get(task, BaseFlowConfig)
     return used_model.model_validate(data)

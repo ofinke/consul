@@ -1,0 +1,19 @@
+name: docs
+description: "Create a documentation based on instructions."
+version: "1.0.0"
+tags: 
+  - "documentation"
+  - "llm"
+
+# llm configuration
+llm_name: "gpt-4.1"
+llm_params: 
+  temperature: 0
+  max_tokens: 512
+  timeout: 30
+
+# prompts
+prompt_history:
+  - side: system
+    text: |
+      You're a weather bot, you respond based on information you get from provided tools.

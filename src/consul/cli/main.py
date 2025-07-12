@@ -1,9 +1,12 @@
 import click
+from langchain_core.messages import ChatMessage
 from loguru import logger
 
-from consul.cli.logging.base import setup_loguru_intercept
+from consul.cli.logs.base import setup_loguru_intercept
 from consul.core.config.base import ChatTurn
-from consul.tasks.chat import ChatTask
+from consul.core.config.flow import AvailableFlow
+from consul.flow.agents.docs import ReactAgentTask
+from consul.flow.tasks.chat import ChatTask
 
 
 @click.command()
@@ -14,7 +17,7 @@ def main(*, verbose: bool, quiet: bool) -> None:
     setup_loguru_intercept(verbose=verbose, quiet=quiet)
 
     # Initialize conversation
-    task = ChatTask()
+    task = ChatTask(AvailableFlow.CHAT)
     memory: list[ChatTurn] = []
 
     # Welcome message
@@ -30,45 +33,55 @@ def main(*, verbose: bool, quiet: bool) -> None:
     click.echo("Type '/quit', '/exit', or press Ctrl+C to end the conversation.")
     click.echo("-" * 76)
 
-    try:
-        while True:
-            # Get user input
-            try:
-                user_input = click.prompt("\nYou", type=str, prompt_suffix=": ")
-            except click.Abort:
-                # Handle Ctrl+C gracefully
-                break
+    agent = ReactAgentTask(AvailableFlow.DOCS)
 
-            # Check for exit commands
-            if user_input.lower().strip() in ["/quit", "/exit", "/q"]:
-                break
+    # Execute with a weather question
+    result = agent.execute(
+        {"messages": [ChatMessage(role="user", content="What is weather in San Francisco?")]}
+    )
 
-            # Skip empty inputs
-            if not user_input.strip():
-                click.echo("Please enter a message or 'quit' to exit.")
-                continue
+    click.echo(f"Final response: {result.messages[-1].content}")
+    click.echo("All messages:", [turn.text for turn in result.messages])
 
-            # Add user message to memory
-            memory.append(ChatTurn(side="human", text=user_input))
+    # try:
+    #     while True:
+    #         # Get user input
+    #         try:
+    #             user_input = click.prompt("\nYou", type=str, prompt_suffix=": ")
+    #         except click.Abort:
+    #             # Handle Ctrl+C gracefully
+    #             break
 
-            try:
-                # Get LLM response
-                result = task.execute({"history": memory})
+    #         # Check for exit commands
+    #         if user_input.lower().strip() in ["/quit", "/exit", "/q"]:
+    #             break
 
-                # Add LLM response to memory
-                memory.append(result.history[-1])
+    #         # Skip empty inputs
+    #         if not user_input.strip():
+    #             click.echo("Please enter a message or 'quit' to exit.")
+    #             continue
 
-                # Display response
-                click.echo(f"\nAssistant: {result.history[-1].text}")
+    #         # Add user message to memory
+    #         memory.append(ChatMessage(role="user", content=user_input))
 
-            except Exception as e:  # noqa: BLE001
-                logger.exception(f"Failed to get response: {e!s}")
-                # Remove the last user message if processing failed
-                if memory and memory[-1].side == "human":
-                    memory.pop()
+    #         try:
+    #             # Get LLM response
+    #             result = task.execute({"messages": memory})
 
-    except KeyboardInterrupt:
-        pass
+    #             # Add LLM response to memory
+    #             memory.append(result.messages[-1])
+
+    #             # Display response
+    #             click.echo(f"\nAssistant: {result.messages[-1].content}")
+
+    #         except Exception as e:  # noqa: BLE001
+    #             logger.exception(f"Failed to get response: {e!s}")
+    #             # Remove the last user message if processing failed
+    #             if memory and memory[-1].role == "human":
+    #                 memory.pop()
+
+    # except KeyboardInterrupt:
+    #     pass
 
     # Goodbye message
     click.echo("\n\nTurning off!")
