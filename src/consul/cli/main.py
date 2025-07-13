@@ -5,7 +5,7 @@ from loguru import logger
 from consul.cli.logs.base import setup_loguru_intercept
 from consul.core.config.base import ChatTurn
 from consul.core.config.flow import AvailableFlow
-from consul.flow.agents.docs import ReactAgentTask
+from consul.flow.agents.react import ReactAgentFlow
 from consul.flow.tasks.chat import ChatTask
 
 
@@ -33,7 +33,7 @@ def main(*, verbose: bool, quiet: bool) -> None:
     click.echo("Type '/quit', '/exit', or press Ctrl+C to end the conversation.")
     click.echo("-" * 76)
 
-    agent = ReactAgentTask(AvailableFlow.DOCS)
+    agent = ReactAgentFlow(AvailableFlow.DOCS)
 
     # Execute with a weather question
     result = agent.execute(
@@ -41,7 +41,6 @@ def main(*, verbose: bool, quiet: bool) -> None:
     )
 
     click.echo(f"Final response: {result.messages[-1].content}")
-    click.echo("All messages:", [turn.text for turn in result.messages])
 
     # try:
     #     while True:

@@ -17,3 +17,7 @@ prompt_history:
   - side: system
     text: |
       You're a weather bot, you respond based on information you get from provided tools.
+
+# tools
+tools:
+  - weather

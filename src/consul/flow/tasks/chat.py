@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, ChatMessage
+from langchain_core.messages import ChatMessage
 from langgraph.graph import StateGraph
 
 from consul.flow.base import BaseFlow, BaseGraphState
@@ -15,6 +15,10 @@ class ChatTask(BaseFlow):
     def state_schema(self) -> BaseGraphState:
         return BaseGraphState
 
+    @property
+    def output_schema(self) -> BaseGraphState:
+        return BaseGraphState
+
     def build_system_prompt(self) -> list[ChatMessage]:
         return [
             ChatMessage(role=turn.side, content=turn.text)
@@ -28,21 +32,10 @@ class ChatTask(BaseFlow):
         def llm_node(state: BaseGraphState) -> BaseGraphState:
             full_history = [*self._system_prompt, *state.messages]
             response = self._llm.invoke(full_history)
-            return self.append_llm_response(response, state)
+            return self.state_schema(messages=[*state.messages, response])
 
         graph.add_node("llm_call", llm_node)
         graph.set_entry_point("llm_call")
         graph.set_finish_point("llm_call")
 
         return graph
-
-    def append_llm_response(
-        self, response: AIMessage, state: BaseGraphState
-    ) -> BaseGraphState:
-        """Includes latest AI message in the BaseGraphState."""
-        return BaseGraphState(
-            messages=[
-                *state.messages,
-                ChatMessage(role="assistant", content=response.content),
-            ]
-        )

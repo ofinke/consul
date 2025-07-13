@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 
-from langchain_core.messages import ChatMessage
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage, ChatMessage
 from langchain_openai import AzureChatOpenAI
 from langgraph.graph import StateGraph
 from loguru import logger
@@ -10,36 +12,40 @@ from consul.core.config.flow import AvailableFlow, BaseFlowConfig, get_flow_conf
 from consul.core.settings import settings
 
 
-class BaseTaskInput(BaseModel):
+class BaseFlowInput(BaseModel):
     """Base input schema - tasks should subclass this."""
 
 
 class BaseGraphState(BaseModel):
     """Base state of the langgraph graph."""
 
-    messages: list[ChatMessage]
+    messages: Sequence[BaseMessage]
+
+
+class BaseFlowOutput(BaseGraphState):
+    """Base output schema - Use this for limit what output is presented to user."""
 
 
 class BaseFlow(ABC):
     """Abstract base class for all tasks."""
 
-    def __init__(self, config: AvailableFlow) -> None:
+    def __init__(self, flow_name: AvailableFlow) -> None:
         """
         Initialize the base flow for a task.
 
         Args:
-            config (AvailableFlow): The configuration object specifying
-                which flow/task to run and its associated settings.
+            flow_name (AvailableFlow): The flow name specifying
+                which flow/task to run and its associated configuration.
 
         Attributes:
-            _config (AvailableFlow): Stores the configuration for the flow.
+            _flow_name (AvailableFlow): Stores the flow name.
             _system_prompt (list[ChatMessage]): Cached list of system prompt messages.
             _graph (StateGraph | None): LangGraph graph instance for the flow (uncompiled).
             _compiled_graph: Compiled LangGraph graph ready for execution.
             _llm (AzureChatOpenAI | None): The language model interface for LLM calls.
 
         """
-        self._config: AvailableFlow = config
+        self._flow_name: AvailableFlow = flow_name
         self._system_prompt: list[ChatMessage] = []
         self._graph: StateGraph | None = None
         self._compiled_graph = None
@@ -47,18 +53,23 @@ class BaseFlow(ABC):
 
     @property
     def config(self) -> BaseFlowConfig:
-        return get_flow_config(self._config)
+        return get_flow_config(self._flow_name)
 
     # Core abstractions - must implement
     @property
     @abstractmethod
-    def input_schema(self) -> BaseTaskInput:
+    def input_schema(self) -> BaseFlowInput:
         """Input schema for this task."""
 
     @property
     @abstractmethod
     def state_schema(self) -> BaseGraphState:
-        """Output schema for task state."""
+        """Schema used in the graph."""
+
+    @property
+    @abstractmethod
+    def output_schema(self) -> BaseFlowOutput:
+        """Output schema. Use if you want to limit what is returned to the user."""
 
     @abstractmethod
     def build_system_prompt(self) -> list[ChatMessage]:
@@ -69,14 +80,14 @@ class BaseFlow(ABC):
         """Build the LangGraph graph for this task."""
 
     # Common interface
-    def get_llm(self) -> AzureChatOpenAI:
+    def get_llm(self) -> BaseChatModel:
         return AzureChatOpenAI(
             model=self.config.llm_name,
             **settings.azure.get_credentials(),
             **self.config.llm_params.model_dump(),
         )
 
-    def prepare_to_run(self, input_data: dict[str, any]) -> BaseTaskInput:
+    def prepare_to_run(self, input_data: dict[str, any]) -> BaseFlowInput:
         """
         Prepares the task to run by:
         - Validating input data.
@@ -91,7 +102,7 @@ class BaseFlow(ABC):
             validated_input: The validated and parsed input object.
 
         """
-        # Validate input
+        # Validate input based on input schema
         validated_input = self.input_schema(**input_data)
         logger.debug(f"Task '{self.config.name}' {validated_input=}")
 
@@ -121,9 +132,10 @@ class BaseFlow(ABC):
         result = self._compiled_graph.invoke(validated_input)
         return self.state_schema(**result)
 
-    async def aexecute(self, input_data: dict[str, any]) -> BaseGraphState:
-        """Async version of execute."""
-        logger.info(f"Async executing task: '{self.config.name}'")
-        validated_input = self.prepare_to_run(input_data)
-        result = await self._compiled_graph.ainvoke(validated_input)
-        return self.state_schema(**result)
+    # TODO: write full async implementation
+    # async def aexecute(self, input_data: dict[str, any]) -> BaseGraphState:
+    #     """Async version of execute."""
+    #     logger.info(f"Async executing task: '{self.config.name}'")
+    #     validated_input = self.prepare_to_run(input_data)
+    #     result = await self._compiled_graph.ainvoke(validated_input)
+    #     return self.state_schema(**result)

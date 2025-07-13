@@ -7,6 +7,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from consul.core.config.base import ChatTurn
+from consul.core.config.tools import AvailableTools
 
 
 class AvailableFlow(Enum):
@@ -36,10 +37,17 @@ class BaseFlowConfig(BaseModel):
     prompt_history: list[ChatTurn]
 
 
+class BaseAgentConfig(BaseFlowConfig):
+    # tools
+    tools: list[AvailableTools]
+
+
 @lru_cache(maxsize=100)
 def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
     """Retrieve configuration for specific task."""
-    config_mapping = {}
+    config_mapping = {
+        AvailableFlow.DOCS: BaseAgentConfig,
+    }
 
     # try to load data from default config
     try:
