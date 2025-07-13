@@ -6,7 +6,7 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel
 
-from consul.core.config.base import ChatTurn
+from consul.core.config.base import ChatTurnConfig
 from consul.core.config.tools import AvailableTools
 
 
@@ -34,7 +34,7 @@ class BaseFlowConfig(BaseModel):
     llm_params: LLMParameters = LLMParameters()
 
     # prompts:
-    prompt_history: list[ChatTurn]
+    prompt_history: list[ChatTurnConfig]
 
 
 class BaseAgentConfig(BaseFlowConfig):
