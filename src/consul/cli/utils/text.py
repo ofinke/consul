@@ -1,5 +1,8 @@
 import click
 
+EXIT_COMMANDS = {"/quit", "/exit", "/q"}
+PROMPT_SEPARATOR = "-" * 76
+
 
 def print_cli_intro() -> None:
     """Prints introductory text to CLI interface of Consul."""
@@ -12,5 +15,11 @@ def print_cli_intro() -> None:
     click.echo("")
     click.echo("Welcome to the Consul CLI! Consul is a set of LLM task/agents designed")
     click.echo("to help with simple problems. It is a hobby project :)")
-    click.echo("Type '/quit', '/exit', or press Ctrl+C to end the conversation.")
+    click.echo(f"Type {', '.join(EXIT_COMMANDS)}, or press Ctrl+C to end the conversation.")
     click.echo("-" * 76)
+
+
+def print_cli_goodbye() -> None:
+    """Display goodbye message."""
+    click.echo("\n\nTurning off!")
+    click.echo(PROMPT_SEPARATOR)

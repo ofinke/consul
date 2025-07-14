@@ -3,13 +3,10 @@ from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
 
 from consul.cli.logs.base import setup_loguru_intercept
-from consul.cli.utils.text import print_cli_intro
+from consul.cli.utils.text import EXIT_COMMANDS, print_cli_goodbye, print_cli_intro
 from consul.core.config.flow import AvailableFlow
 from consul.flow.agents.react import ReactAgentFlow
 from consul.flow.tasks.chat import ChatTask
-
-EXIT_COMMANDS = {"/quit", "/exit", "/q"}
-PROMPT_SEPARATOR = "-" * 76
 
 
 class FlowType(click.Choice):
@@ -114,12 +111,6 @@ def _process_user_message(
     return True
 
 
-def _display_goodbye() -> None:
-    """Display goodbye message."""
-    click.echo("\n\nTurning off!")
-    click.echo(PROMPT_SEPARATOR)
-
-
 @click.command()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 @click.option("--quiet", "-q", is_flag=True, help="Only show warnings and errors")
@@ -156,7 +147,7 @@ def main(*, verbose: bool, quiet: bool, flow: str) -> None:
         click.echo(f"Unexpected error: {e!s}", err=True)
         raise click.ClickException(str(e)) from e
     finally:
-        _display_goodbye()
+        print_cli_goodbye()
 
 
 if __name__ == "__main__":

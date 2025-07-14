@@ -1,5 +1,5 @@
 name: docs
-description: "Create a documentation based on instructions."
+description: "Create code documentation based on instructions."
 version: "1.0.0"
 tags: 
   - "documentation"
