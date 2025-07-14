@@ -22,6 +22,10 @@ class LLMParameters(BaseModel):
     timeout: int = 30
 
 
+class AgentParameters(BaseModel):
+    max_iterations: int = 5
+
+
 class BaseFlowConfig(BaseModel):
     # task metadata
     name: str
@@ -38,6 +42,9 @@ class BaseFlowConfig(BaseModel):
 
 
 class BaseAgentConfig(BaseFlowConfig):
+    # agent config
+    agent: AgentParameters
+
     # tools
     tools: list[AvailableTools]
 

@@ -1,5 +1,5 @@
 name: chat
-description: "Chat with a LLM."
+description: "Chat with LLM."
 version: "1.0.0"
 tags: 
   - "chat"

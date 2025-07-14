@@ -5,6 +5,7 @@
   - Variables into user messages handled on the CLI / API side?
   - Variables from config handled on the flow classes side?
   - All variables handled on the flow side, leading to more custom flows.
+- Redo tools as MCP
 
 # Next steps
 

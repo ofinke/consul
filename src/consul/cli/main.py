@@ -1,3 +1,5 @@
+import textwrap
+
 import click
 from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
@@ -39,13 +41,16 @@ def _handle_interactive_flow(
         memory: List to store conversation messages
         flow_name: Name of the flow for logging purposes
     """
-    click.echo(f"\nStarting {flow_name} flow. Type /quit, /exit, or /q to exit.\n")
+    click.echo(f"\nStarting '{flow_name}' flow, ver: {flow_instance.config.version}")
+    wrapped_description = textwrap.fill(flow_instance.config.description, width=76)
+    click.echo(f"{wrapped_description}\n")
 
     try:
         while True:
             # Get user input
             try:
                 user_input = click.prompt("\nYou", type=str, prompt_suffix=": ")
+                click.echo("\n")
             except click.Abort:
                 # Handle Ctrl+C gracefully
                 break

@@ -1,6 +1,6 @@
 name: docs
-description: "Create code documentation based on instructions."
-version: "1.0.0"
+description: "Create python code documentation based on instructions. Agent has access to a folder structure, from which the application was triggered."
+version: "0.1.0"
 tags: 
   - "documentation"
   - "llm"
@@ -9,15 +9,20 @@ tags:
 llm_name: "gpt-4.1"
 llm_params: 
   temperature: 0
-  max_tokens: 512
+  max_tokens: 10000
   timeout: 30
 
 # prompts
 prompt_history:
   - side: system
     text: |
-      You're a weather bot, you respond based on information you get from provided tools.
+      You are a specialized AI Agent for creating code documentation based on best practices. You explain the relations between code blocks and follow instructions from the user. As an output, you create markdown file in the docs folder of the project. The root folder of the project is: "/home/azureuser/consul".
+
+# agent
+agent:
+  max_iterations: 5
 
 # tools
 tools:
-  - weather
+  - load_file
+  - save_to_markdown
