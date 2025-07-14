@@ -8,7 +8,7 @@ from loguru import logger
 
 from consul.core.config.flow import AvailableFlow
 from consul.core.config.tools import TOOL_MAPPING
-from consul.flow.base import BaseFlow, BaseGraphState
+from consul.flows.base import BaseFlow, BaseGraphState
 
 
 class ReactAgentFlow(BaseFlow):
@@ -36,6 +36,7 @@ class ReactAgentFlow(BaseFlow):
 
     def build_system_prompt(self) -> list[ChatMessage]:
         """Builds system prompt from config."""
+        # TODO: Add automatic variables formatting with custom
         return [
             ChatMessage(role=turn.side, content=turn.text)
             for turn in self.config.prompt_history

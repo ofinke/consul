@@ -7,8 +7,8 @@ from loguru import logger
 from consul.cli.logs.base import setup_loguru_intercept
 from consul.cli.utils.text import EXIT_COMMANDS, print_cli_goodbye, print_cli_intro
 from consul.core.config.flow import AvailableFlow
-from consul.flow.agents.react import ReactAgentFlow
-from consul.flow.tasks.chat import ChatTask
+from consul.flows.agents.react import ReactAgentFlow
+from consul.flows.tasks.chat import ChatTask
 
 
 class FlowType(click.Choice):
@@ -50,7 +50,7 @@ def _handle_interactive_flow(
             # Get user input
             try:
                 user_input = click.prompt("\nYou", type=str, prompt_suffix=": ")
-                click.echo("\n")
+                click.echo()
             except click.Abort:
                 # Handle Ctrl+C gracefully
                 break
@@ -126,7 +126,15 @@ def _process_user_message(
     default="chat",
     help="Select flow type (chat or docs)",
 )
-def main(*, verbose: bool, quiet: bool, flow: str) -> None:
+# TODO: finish setting up this variable
+@click.option(
+    "--message",
+    "-m",
+    type=str,
+    default="",
+    help="Write initial message for the flow.",
+)
+def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
     """Interactive CLI chat application."""
     # Setup logging
     if verbose and quiet:

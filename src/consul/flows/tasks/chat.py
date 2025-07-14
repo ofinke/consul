@@ -1,7 +1,7 @@
 from langchain_core.messages import ChatMessage
 from langgraph.graph import StateGraph
 
-from consul.flow.base import BaseFlow, BaseGraphState
+from consul.flows.base import BaseFlow, BaseGraphState
 
 
 class ChatTask(BaseFlow):

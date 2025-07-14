@@ -1,3 +1,7 @@
+# TODO: Add a factory which automatically creates mapping for config, can it even
+# populate enum? is enum necessary if there will be factory for it?
+# But in the end I would like tools to be handled by MCP.
+
 from langchain_core.tools import tool
 
 
