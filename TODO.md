@@ -1,8 +1,10 @@
 # Shortterm
 
-- Probably migrate the ChatTurn to BaseMessage to unify it if I want to use langgraph ecosystem
-- Go through the BaseAgentFlow and ReAct agent to unify it as much with ChatTask.
-
+- Prepare tools for docs / test agents
+- Prepare custom prompt variables, options:
+  - Variables into user messages handled on the CLI / API side?
+  - Variables from config handled on the flow classes side?
+  - All variables handled on the flow side, leading to more custom flows.
 
 # Next steps
 
