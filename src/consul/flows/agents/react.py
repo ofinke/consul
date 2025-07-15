@@ -9,7 +9,7 @@ from loguru import logger
 from consul.core.config.flow import AvailableFlow
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
-from consul.inject.tree import get_project_tree
+from consul.prompt.tree import get_project_tree
 
 
 class ReactAgentFlow(BaseFlow):
