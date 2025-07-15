@@ -1,29 +1,28 @@
 import importlib
-import os
+from pathlib import Path
 
-from loguru import logger
-
-# registry.py
-registry = {}
+PROMPT_FORMAT_MAPPING = {}
 
 
-def autodiscover_plugins():
-    current_dir = os.path.dirname(__file__)  # <== /prompt
-    logger.info(current_dir)
-    for fname in os.listdir(current_dir):
-        if (
-            fname.endswith(".py")
-            and fname != "registry.py"
-            and not fname.startswith("__")
-        ):
-            module_name = f"{__package__}.{fname[:-3]}" if __package__ else fname[:-3]
-            importlib.import_module(module_name)
+def autodiscover_plugins() -> None:
+    """Auto-import plugin modules in the same folder, except registry.py and dunders."""
+    current_file = Path(__file__)
+    current_dir = current_file.parent
+
+    for pyfile in current_dir.glob("*.py"):
+        if pyfile.name == current_file.name or pyfile.name.startswith("__"):
+            continue
+        module_name = f"{__package__}.{pyfile.stem}" if __package__ else pyfile.stem
+        importlib.import_module(module_name)
 
 
-def register(func):
-    registry[func.__name__] = func
+def register_prompt_format(func: callable) -> callable:
+    """Register prompt format into a registry."""
+    PROMPT_FORMAT_MAPPING[func.__name__] = func()
     return func
 
 
-# Discover and register all plugins at import time:
+# Running this causes, that when the module is imported, all functions with the
+# register_prompt_format are executed and their output is stored in the
+# PROMPT_FORMAT_MAPPING
 autodiscover_plugins()

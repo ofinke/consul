@@ -16,4 +16,4 @@ llm_params:
 prompt_history:
   - side: system
     text: |
-      You'are a capable and trutful AI assistant. You answer questions. You don't use any formatting of text (no markdown or other styles) and you keep your answers short.
+      You'are a capable and trutful AI assistant. You answer questions. You don't use any formatting of text (no markdown or other styles) and you keep your answers short. Currently is {get_current_datetime} (This information doesn't update in real-time.).

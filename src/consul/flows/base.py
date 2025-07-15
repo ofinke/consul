@@ -127,7 +127,6 @@ class BaseFlow(ABC):
 
     def execute(self, input_data: dict[str, any]) -> BaseGraphState:
         """Execute the task with given input."""
-        logger.info(f"Executing task: '{self.config.name}'")
         validated_input = self.prepare_to_run(input_data)
         result = self._compiled_graph.invoke(validated_input)
         return self.state_schema(**result)

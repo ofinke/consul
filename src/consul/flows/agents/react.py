@@ -6,10 +6,10 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
+import consul.prompt.registry as pfr  # import as module to run the auto detection
 from consul.core.config.flow import AvailableFlow
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
-from consul.prompt.tree import get_project_tree
 
 
 class ReactAgentFlow(BaseFlow):
@@ -37,11 +37,10 @@ class ReactAgentFlow(BaseFlow):
 
     def build_system_prompt(self) -> list[ChatMessage]:
         """Builds system prompt from config."""
-        # TODO: Add automatic variables formatting with custom
         return [
             ChatMessage(
                 role=turn.side,
-                content=turn.text.format_map({"get_project_tree": get_project_tree()}),
+                content=turn.text.format_map(pfr.PROMPT_FORMAT_MAPPING),
             )
             for turn in self.config.prompt_history
         ]
