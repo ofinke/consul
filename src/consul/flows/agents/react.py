@@ -9,6 +9,7 @@ from loguru import logger
 from consul.core.config.flow import AvailableFlow
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
+from consul.inject.tree import get_project_tree
 
 
 class ReactAgentFlow(BaseFlow):
@@ -38,7 +39,10 @@ class ReactAgentFlow(BaseFlow):
         """Builds system prompt from config."""
         # TODO: Add automatic variables formatting with custom
         return [
-            ChatMessage(role=turn.side, content=turn.text)
+            ChatMessage(
+                role=turn.side,
+                content=turn.text.format_map({"get_project_tree": get_project_tree()}),
+            )
             for turn in self.config.prompt_history
         ]
 
@@ -73,7 +77,7 @@ class ReactAgentFlow(BaseFlow):
             tool_outputs = []
             for tool_call in last_message.tool_calls:
                 logger.debug(
-                    f"Task '{self.config.name}' executing tool call '{tool_call['name']}' with args={str(tool_call['args'])[:25]}..."  # noqa: E501
+                    f"Task '{self.config.name}' executing tool call '{tool_call['name']}' with args={str(tool_call['args'])[:25]!r}..."  # noqa: E501
                 )
                 tool_result = self._tools_by_name[tool_call["name"]].invoke(
                     tool_call["args"]
@@ -88,7 +92,7 @@ class ReactAgentFlow(BaseFlow):
                     )
                 )
                 logger.success(
-                    f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].content[:25]}...'"  # noqa: E501
+                    f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].content[:25]!r}...'"  # noqa: E501
                 )
             return self.state_schema(messages=[*state.messages, *tool_outputs])
 

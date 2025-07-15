@@ -132,6 +132,7 @@ name = "consul"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
     { name = "langchain" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
@@ -141,15 +142,13 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-cli = [
-    { name = "click" },
-]
 dev = [
     { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "click", specifier = ">=8.1.8" },
     { name = "langchain", specifier = ">=0.3.21" },
     { name = "langchain-ollama", specifier = ">=0.3.0" },
     { name = "langchain-openai", specifier = ">=0.3.27" },
@@ -159,7 +158,6 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-cli = [{ name = "click", specifier = ">=8.1.8" }]
 dev = [{ name = "ruff", specifier = ">=0.11.2" }]
 
 [[package]]

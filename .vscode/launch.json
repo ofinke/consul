@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/consul/cli/main.py",
             "console": "integratedTerminal",
-            "args": ["-v"],
+            "args": ["-v", "-f", "docs"],
             "justMyCode": false,
         }
     ]

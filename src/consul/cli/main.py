@@ -31,7 +31,9 @@ def handle_docs_flow(memory: list[BaseMessage]) -> None:
 
 
 def _handle_interactive_flow(
-    flow_instance: ChatTask | ReactAgentFlow, memory: list[BaseMessage], flow_name: str
+    flow_instance: ChatTask | ReactAgentFlow,
+    memory: list[BaseMessage],
+    flow_name: str,
 ) -> None:
     """
     Handle interactive flow for both chat and docs.
@@ -80,39 +82,30 @@ def _process_user_message(
 ) -> bool:
     """
     Process a user message and update memory.
-
     Args:
         flow_instance: The flow instance to execute
         memory: List to store conversation messages
         user_input: User's input message
         flow_name: Name of the flow for logging purposes
-
     Returns:
         bool: True if processing was successful, False if should exit.
     """
     # Add user message to memory
     user_message = ChatMessage(role="user", content=user_input)
     memory.append(user_message)
-
     try:
-        # Get response from the flow
         result = flow_instance.execute({"messages": memory})
-
         # Add response to memory
         assistant_message = result.messages[-1]
         memory.append(assistant_message)
-
         # Display response
         click.echo(f"\nAssistant: {assistant_message.content}")
-
     except Exception as e:
         logger.exception(f"Failed to get response from {flow_name} flow: {e!s}")
         click.echo(f"Error: {e!s}", err=True)
-
         # Remove the last user message if processing failed
         if memory and memory[-1] == user_message:
             memory.pop()
-
     return True
 
 

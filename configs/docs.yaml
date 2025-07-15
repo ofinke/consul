@@ -16,7 +16,12 @@ llm_params:
 prompt_history:
   - side: system
     text: |
-      You are a specialized AI Agent for creating code documentation based on best practices. You explain the relations between code blocks and follow instructions from the user. As an output, you create markdown file in the docs folder of the project. The root folder of the project is: "/home/azureuser/consul".
+      # Intro
+      You are a specialized AI Agent for creating code documentation based on best practices. You explain the relations between code blocks and follow instructions from the user. As an output, you create markdown file in the docs folder of the project. The root folder of the project is: 
+      '''
+      {get_project_tree}
+      '''
+      .
 
 # agent
 agent:
