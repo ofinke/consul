@@ -2,7 +2,7 @@ import fnmatch
 import os
 from pathlib import Path
 
-from consul.prompt.registry import prompt_format_registry
+from consul.prompt.registry import register
 
 HARDCODED_IGNORES: list[str] = [".git", ".DS_Store", "__pycache__", ".venv", ".env"]
 
@@ -52,7 +52,7 @@ def _matches_any(patterns: list[str], rel_path: str) -> bool:
     return False
 
 
-@prompt_format_registry.register()
+@register
 def get_project_tree() -> str:
     """
     Generate the folder tree structure from the current working directory,
