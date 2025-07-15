@@ -1,7 +1,7 @@
 from langchain_core.messages import ChatMessage
 from langgraph.graph import StateGraph
 
-import consul.prompt.registry as pfr  # import as module to run the auto detection
+from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
 
 
@@ -24,7 +24,7 @@ class ChatTask(BaseFlow):
         return [
             ChatMessage(
                 role=turn.side,
-                content=turn.text.format_map(pfr.PROMPT_FORMAT_MAPPING),
+                content=turn.text.format_map(PROMPT_FORMAT_MAPPING),
             )
             for turn in self.config.prompt_history
         ]

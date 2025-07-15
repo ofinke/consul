@@ -6,8 +6,8 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-import consul.prompt.registry as pfr  # import as module to run the auto detection
-from consul.core.config.flow import AvailableFlow
+from consul.core.config.flows import AvailableFlow
+from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
 
@@ -40,7 +40,7 @@ class ReactAgentFlow(BaseFlow):
         return [
             ChatMessage(
                 role=turn.side,
-                content=turn.text.format_map(pfr.PROMPT_FORMAT_MAPPING),
+                content=turn.text.format_map(PROMPT_FORMAT_MAPPING),
             )
             for turn in self.config.prompt_history
         ]

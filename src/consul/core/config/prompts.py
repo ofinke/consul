@@ -5,14 +5,17 @@ PROMPT_FORMAT_MAPPING = {}
 
 
 def autodiscover_plugins() -> None:
-    """Auto-import plugin modules in the same folder, except registry.py and dunders."""
+    """Auto-import plugin modules in the consul.prompts."""
     current_file = Path(__file__)
-    current_dir = current_file.parent
+    current_dir = current_file.parent.parent.parent / "prompts"
+
+    # Determine package
+    base_package = "consul.prompts"
 
     for pyfile in current_dir.glob("*.py"):
         if pyfile.name == current_file.name or pyfile.name.startswith("__"):
             continue
-        module_name = f"{__package__}.{pyfile.stem}" if __package__ else pyfile.stem
+        module_name = f"{base_package}.{pyfile.stem}"
         importlib.import_module(module_name)
 
 

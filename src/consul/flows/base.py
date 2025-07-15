@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph
 from loguru import logger
 from pydantic import BaseModel
 
-from consul.core.config.flow import AvailableFlow, BaseFlowConfig, get_flow_config
+from consul.core.config.flows import AvailableFlow, BaseFlowConfig, get_flow_config
 from consul.core.settings import settings
 
 

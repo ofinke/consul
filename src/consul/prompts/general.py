@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytz
 
-from consul.prompt.registry import register_prompt_format
+from consul.core.config.prompts import register_prompt_format
 
 
 @register_prompt_format

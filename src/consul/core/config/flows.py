@@ -12,7 +12,6 @@ from consul.core.config.tools import AvailableTools
 
 class AvailableFlow(Enum):
     CHAT = "chat"
-    TEST = "test"
     DOCS = "docs"
 
 

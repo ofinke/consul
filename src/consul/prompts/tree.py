@@ -2,7 +2,7 @@ import fnmatch
 import os
 from pathlib import Path
 
-from consul.prompt.registry import register_prompt_format
+from consul.core.config.prompts import register_prompt_format
 
 HARDCODED_IGNORES: list[str] = [".git", ".DS_Store", "__pycache__", ".venv", ".env"]
 
