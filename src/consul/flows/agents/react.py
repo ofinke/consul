@@ -15,7 +15,7 @@ from consul.flows.base import BaseFlow, BaseGraphState
 class ReactAgentFlow(BaseFlow):
     """Base class for agent tasks with tool support."""
 
-    def __init__(self, flow_name: AvailableFlow):
+    def __init__(self, flow_name: AvailableFlow) -> None:
         super().__init__(flow_name)
         self._tools_by_name: dict[str, BaseTool] = {}
 
@@ -78,21 +78,15 @@ class ReactAgentFlow(BaseFlow):
                 logger.debug(
                     f"Task '{self.config.name}' executing tool call '{tool_call['name']}' with args={str(tool_call['args'])[:25]!r}..."  # noqa: E501
                 )
-                tool_result = self._tools_by_name[tool_call["name"]].invoke(
-                    tool_call["args"]
-                )
+                tool_result = self._tools_by_name[tool_call["name"]].invoke(tool_call["args"])
                 tool_outputs.append(
                     ToolMessage(
-                        content=json.dumps(tool_result)
-                        if not isinstance(tool_result, str)
-                        else tool_result,
+                        content=json.dumps(tool_result) if not isinstance(tool_result, str) else tool_result,
                         name=tool_call["name"],
                         tool_call_id=tool_call["id"],
                     )
                 )
-                logger.success(
-                    f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].content[:25]!r}...'"  # noqa: E501
-                )
+                logger.success(f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].content[:25]!r}...'")
             return self.state_schema(messages=[*state.messages, *tool_outputs])
 
         def should_continue(state: BaseGraphState) -> str:

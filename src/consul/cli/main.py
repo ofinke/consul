@@ -5,7 +5,7 @@ from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
 
 from consul.cli.logs.base import setup_loguru_intercept
-from consul.cli.utils.text import EXIT_COMMANDS, print_cli_goodbye, print_cli_intro
+from consul.cli.utils.text import EXIT_COMMANDS, MAX_WIDTH, print_cli_goodbye, print_cli_intro
 from consul.core.config.flows import AvailableFlow
 from consul.flows.agents.react import ReactAgentFlow
 from consul.flows.tasks.chat import ChatTask
@@ -70,18 +70,17 @@ def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
 
     # print flow intro
     click.echo(f"\nStarting '{flow}' flow, ver: {flow_instance.config.version}")
-    wrapped_description = textwrap.fill(flow_instance.config.description, width=76)
-    click.echo(f"{wrapped_description}\n")
+    wrapped_description = textwrap.fill(flow_instance.config.description, width=MAX_WIDTH)
+    click.echo(f"Description: {wrapped_description}")
 
     try:
         while True:
             # Get user input
             try:
                 if not message:
-                    user_input = click.prompt("\nYou", type=str, prompt_suffix=": ")
-                    click.echo()
+                    user_input = click.prompt(click.style("\nYou", fg="blue"), type=str, prompt_suffix=": ")
                 else:
-                    click.echo(f"\nYou: {message}")
+                    click.echo(f"\nYou: {textwrap.fill(message, width=MAX_WIDTH)}", nl=False)
                     user_input = message
                     message = ""  # reset message to avoid infinite loop
             except click.Abort:
@@ -105,7 +104,8 @@ def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
             assistant_message = result.messages[-1]
             memory.append(assistant_message)
             # Display response
-            click.echo(f"\nAssistant: {assistant_message.content}")
+            click.echo("\n" + click.style("Assistant", fg="green") + ": ")
+            click.echo(textwrap.fill(assistant_message.content, width=MAX_WIDTH))
 
     except KeyboardInterrupt:
         pass

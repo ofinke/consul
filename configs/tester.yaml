@@ -1,0 +1,14 @@
+name: tester
+description: "React agent designed to write tests in the pytest framework according to best python practices. Has access project structure from the main triggered folder, can read specific files and create new files."
+version: "0.1.0"
+tags: 
+  - "tests"
+  - "development"
+  - "agent"
+
+# llm configuration
+llm_name: "gpt-4.1"
+llm_params: 
+  temperature: 0
+  max_tokens: 10000
+  timeout: 30

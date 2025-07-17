@@ -2,8 +2,9 @@ name: docs
 description: "Create python code documentation based on instructions. Agent has access to a folder structure, from which the application was triggered."
 version: "0.1.0"
 tags: 
+  - "development"
   - "documentation"
-  - "llm"
+  - "agent"
 
 # llm configuration
 llm_name: "gpt-4.1"
