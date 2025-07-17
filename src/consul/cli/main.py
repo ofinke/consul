@@ -13,6 +13,7 @@ from consul.flows.tasks.chat import ChatTask
 FLOWS = {
     "chat": ChatTask(AvailableFlow.CHAT),
     "docs": ReactAgentFlow(AvailableFlow.DOCS),
+    "tester": ReactAgentFlow(AvailableFlow.TESTER)
 }
 
 
@@ -80,7 +81,7 @@ def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
                 if not message:
                     user_input = click.prompt(click.style("\nYou", fg="blue"), type=str, prompt_suffix=": ")
                 else:
-                    click.echo(f"\nYou: {textwrap.fill(message, width=MAX_WIDTH)}", nl=False)
+                    click.echo(f"\nYou: {textwrap.fill(message, width=MAX_WIDTH)}")
                     user_input = message
                     message = ""  # reset message to avoid infinite loop
             except click.Abort:

@@ -50,4 +50,4 @@ agent:
 # tools
 tools:
   - load_file
-  - save_to_markdown
+  - save_to_file

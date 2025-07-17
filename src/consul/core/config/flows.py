@@ -13,6 +13,7 @@ from consul.core.config.tools import AvailableTools
 class AvailableFlow(Enum):
     CHAT = "chat"
     DOCS = "docs"
+    TESTER = "tester"
 
 
 class LLMParameters(BaseModel):
@@ -53,6 +54,7 @@ def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
     """Retrieve configuration for specific task."""
     config_mapping = {
         AvailableFlow.DOCS: BaseAgentConfig,
+        AvailableFlow.TESTER: BaseAgentConfig,
     }
 
     # try to load data from default config
