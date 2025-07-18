@@ -5,7 +5,14 @@ from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
 
 from consul.cli.logs.base import setup_loguru_intercept
-from consul.cli.utils.text import EXIT_COMMANDS, MAX_WIDTH, print_cli_goodbye, print_cli_intro
+from consul.cli.utils.text import (
+    EXIT_COMMANDS,
+    MAX_WIDTH,
+    RESET_COMMANDS,
+    print_cli_goodbye,
+    print_cli_intro,
+    smart_text_wrap,
+)
 from consul.core.config.flows import AvailableFlow
 from consul.flows.agents.react import ReactAgentFlow
 from consul.flows.tasks.chat import ChatTask
@@ -13,7 +20,7 @@ from consul.flows.tasks.chat import ChatTask
 FLOWS = {
     "chat": ChatTask(AvailableFlow.CHAT),
     "docs": ReactAgentFlow(AvailableFlow.DOCS),
-    "tester": ReactAgentFlow(AvailableFlow.TESTER)
+    "tester": ReactAgentFlow(AvailableFlow.TESTER),
 }
 
 
@@ -70,9 +77,10 @@ def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
     flow_instance = FLOWS.get(flow, ChatTask(AvailableFlow.CHAT))
 
     # print flow intro
-    click.echo(f"\nStarting '{flow}' flow, ver: {flow_instance.config.version}")
-    wrapped_description = textwrap.fill(flow_instance.config.description, width=MAX_WIDTH)
-    click.echo(f"Description: {wrapped_description}")
+    click.echo(
+        f"\nStarting '{flow}' flow, ver: {flow_instance.config.version}, {click.style('Description:', fg='magenta')}"
+    )
+    click.echo(textwrap.fill(flow_instance.config.description, width=MAX_WIDTH))
 
     try:
         while True:
@@ -92,9 +100,15 @@ def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
             if user_input.lower().strip() in EXIT_COMMANDS:
                 break
 
+            # Check for reset
+            if user_input.lower().strip() in RESET_COMMANDS:
+                memory: list[BaseMessage] = []
+                click.echo("\n" + click.style("Command", fg="red") + ": Memory cleared")
+                continue
+
             # Skip empty inputs
             if not user_input.strip():
-                click.echo("Please enter a message or use /quit to exit.")
+                click.echo("Please enter a message")
                 continue
 
             # Run the flow
@@ -106,7 +120,7 @@ def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
             memory.append(assistant_message)
             # Display response
             click.echo("\n" + click.style("Assistant", fg="green") + ": ")
-            click.echo(textwrap.fill(assistant_message.content, width=MAX_WIDTH))
+            click.echo(smart_text_wrap(assistant_message.content))
 
     except KeyboardInterrupt:
         pass

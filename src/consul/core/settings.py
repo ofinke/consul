@@ -1,6 +1,11 @@
-from dotenv import find_dotenv
+from pathlib import Path
+
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def get_project_root() -> Path:
+    return Path(__file__).resolve().parents[3]
 
 
 class AzureCredentials(BaseModel):
@@ -17,7 +22,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",
         case_sensitive=False,
-        env_file=find_dotenv(raise_error_if_not_found=True),
+        env_file=get_project_root() / ".env",
         env_file_encoding="utf-8",
     )
 

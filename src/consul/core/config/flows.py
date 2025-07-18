@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from consul.core.config.base import ChatTurnConfig
 from consul.core.config.tools import AvailableTools
+from consul.core.settings import get_project_root
 
 
 class AvailableFlow(Enum):
@@ -59,7 +60,7 @@ def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
 
     # try to load data from default config
     try:
-        path = Path(__file__).parent / f"../../../../configs/{task.value}.yaml"
+        path = get_project_root() / "configs" / f"{task.value}.yaml"
         path = path.resolve()
         with Path.open(path, "r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
