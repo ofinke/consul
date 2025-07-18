@@ -101,7 +101,8 @@ class ConsulInterface:
             result = self._active_flow.execute({"messages": self._memory})
             # Add response to memory
             assistant_message = result.messages[-1]
-            self._memory.append(assistant_message)
+            new_history_part = result.messages[len(self._memory) :]
+            self._memory.extend(new_history_part)
             # Display response
             click.echo("\n" + click.style("Assistant", fg="green") + ": ")
             click.echo(smart_text_wrap(assistant_message.content))
