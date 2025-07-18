@@ -9,8 +9,8 @@ from langchain_core.tools import tool
 @tool
 def find_patterns(
     pattern_type: str,
-    search_term: str | None = None,
-    file_path: str | None = None,
+    search_term: str = None,
+    file_path: str = None,
     include_usage: bool = True,
     project_root: str = ".",
 ) -> dict[str, Any]:
@@ -36,13 +36,14 @@ def find_patterns(
             "summary": {"total_found": 0, "files_searched": 0, "pattern_type": pattern_type},
         }
 
-    project_path = Path(project_root)
+    project_path = Path(project_root).resolve()
     files_to_search = []
 
     # Determine which files to search
     if file_path:
-        if Path.exists(file_path) and file_path.endswith(".py"):
-            files_to_search = [file_path]
+        file_path_obj = Path(file_path).resolve()
+        if file_path_obj.exists() and file_path_obj.suffix == ".py":
+            files_to_search = [file_path_obj]
         else:
             return {
                 "error": f"File not found or not a Python file: {file_path}",
@@ -51,14 +52,29 @@ def find_patterns(
             }
     else:
         # Find all Python files in the project
-        files_to_search = list(project_path.rglob("*.py"))
+        try:
+            files_to_search = [f for f in project_path.rglob("*.py") if f.is_file()]
+        except (OSError, PermissionError) as e:
+            return {
+                "error": f"Error accessing project directory: {e}",
+                "matches": [],
+                "summary": {"total_found": 0, "files_searched": 0, "pattern_type": pattern_type},
+            }
 
     matches = []
     files_searched = 0
 
-    for file_path in files_to_search:
+    for file_path_obj in files_to_search:
         try:
-            with Path.open(file_path, "r", encoding="utf-8") as file:
+            # Ensure we're working with a Path object
+            if isinstance(file_path_obj, str):
+                file_path_obj = Path(file_path_obj)
+
+            # Skip if not a file or doesn't exist
+            if not file_path_obj.is_file():
+                continue
+
+            with open(file_path_obj, "r", encoding="utf-8") as file:
                 content = file.read()
                 lines = content.splitlines()
 
@@ -67,13 +83,13 @@ def find_patterns(
             # Parse the file with AST
             try:
                 tree = ast.parse(content)
-                file_matches = _analyze_ast(tree, str(file_path), lines, pattern_type, search_term)
+                file_matches = _analyze_ast(tree, str(file_path_obj), lines, pattern_type, search_term)
                 matches.extend(file_matches)
-            except SyntaxError:
-                # Skip files with syntax errors
+            except SyntaxError as e:
+                # Skip files with syntax errors, but you might want to log this
                 continue
 
-        except (OSError, UnicodeDecodeError):
+        except (OSError, UnicodeDecodeError, PermissionError) as e:
             # Skip files that can't be read
             continue
 
@@ -88,20 +104,24 @@ def find_patterns(
 
 
 def _analyze_ast(
-    tree: ast.AST, file_path: str, lines: list[str], pattern_type: str, search_term: str | None = None
+    tree: ast.AST, file_path: str, lines: list[str], pattern_type: str, search_term: str = None
 ) -> list[dict]:
     """Analyze AST tree to find patterns."""
     matches = []
 
     class PatternVisitor(ast.NodeVisitor):
         def visit_FunctionDef(self, node):
-            if pattern_type in ["functions", "calls"]:
+            if pattern_type in ["functions"]:
                 self._process_function(node)
+            if pattern_type == "decorators" and node.decorator_list:
+                self._process_decorators(node)
             self.generic_visit(node)
 
         def visit_AsyncFunctionDef(self, node):
-            if pattern_type in ["functions", "calls"]:
+            if pattern_type in ["functions"]:
                 self._process_function(node, is_async=True)
+            if pattern_type == "decorators" and node.decorator_list:
+                self._process_decorators(node)
             self.generic_visit(node)
 
         def visit_ClassDef(self, node):
@@ -127,13 +147,6 @@ def _analyze_ast(
         def visit_Assign(self, node):
             if pattern_type == "variables":
                 self._process_assignment(node)
-            self.generic_visit(node)
-
-        def visit_FunctionDef(self, node):
-            if pattern_type == "decorators" and node.decorator_list:
-                self._process_decorators(node)
-            if pattern_type == "functions":
-                self._process_function(node)
             self.generic_visit(node)
 
         def _process_function(self, node, is_async=False):
@@ -166,7 +179,15 @@ def _analyze_ast(
                 return
 
             docstring = ast.get_docstring(node) or ""
-            bases = [ast.unparse(base) if hasattr(ast, "unparse") else "BaseClass" for base in node.bases]
+            bases = []
+            for base in node.bases:
+                if isinstance(base, ast.Name):
+                    bases.append(base.id)
+                elif hasattr(ast, "unparse"):
+                    bases.append(ast.unparse(base))
+                else:
+                    bases.append("BaseClass")
+
             inheritance = f"({', '.join(bases)})" if bases else ""
 
             matches.append(
@@ -314,9 +335,17 @@ def _add_usage_locations(matches: list[dict], files_to_search: list, pattern_typ
     # Create a map of names to find
     names_to_find = {match["name"] for match in matches}
 
-    for file_path in files_to_search:
+    for file_path_obj in files_to_search:
         try:
-            with Path.open(file_path, "r", encoding="utf-8") as file:
+            # Ensure we're working with a Path object
+            if isinstance(file_path_obj, str):
+                file_path_obj = Path(file_path_obj)
+
+            # Skip if not a file
+            if not file_path_obj.is_file():
+                continue
+
+            with open(file_path_obj, "r", encoding="utf-8") as file:
                 lines = file.readlines()
 
             for line_no, line in enumerate(lines, 1):
@@ -327,14 +356,14 @@ def _add_usage_locations(matches: list[dict], files_to_search: list, pattern_typ
                         for match in matches:
                             if match["name"] == name:
                                 # Don't add the definition line as usage
-                                if match["file"] == str(file_path) and match["line"] == line_no:
+                                if match["file"] == str(file_path_obj) and match["line"] == line_no:
                                     continue
 
                                 match["usage_locations"].append(
-                                    {"file": str(file_path), "line": line_no, "context": line.strip()}
+                                    {"file": str(file_path_obj), "line": line_no, "context": line.strip()}
                                 )
 
-        except (OSError, UnicodeDecodeError):
+        except (OSError, UnicodeDecodeError, PermissionError) as e:
             continue
 
     return matches

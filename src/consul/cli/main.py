@@ -5,16 +5,16 @@ from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
 
 from consul.cli.logs.base import setup_loguru_intercept
+from consul.cli.utils.commands import Commands
 from consul.cli.utils.text import (
-    EXIT_COMMANDS,
     MAX_WIDTH,
-    RESET_COMMANDS,
     print_cli_goodbye,
     print_cli_intro,
     smart_text_wrap,
 )
 from consul.core.config.flows import AvailableFlow
 from consul.flows.agents.react import ReactAgentFlow
+from consul.flows.base import BaseFlow
 from consul.flows.tasks.chat import ChatTask
 
 FLOWS = {
@@ -31,107 +31,124 @@ class FlowType(click.Choice):
         super().__init__(FLOWS.keys(), case_sensitive=False)
 
 
-@click.command()
-@click.option(
-    "--verbose",
-    "-v",
-    is_flag=True,
-    help="Enable verbose logging",
-)
-@click.option(
-    "--quiet",
-    "-q",
-    is_flag=True,
-    help="Only show warnings and errors",
-)
-@click.option(
-    "--flow",
-    "-f",
-    type=FlowType(),
-    default="chat",
-    help="Select flow type",
-)
-@click.option(
-    "--message",
-    "-m",
-    type=str,
-    default="",
-    help="Write initial message for the flow.",
-)
-def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
-    """Interactive CLI chat application."""
-    # Setup logging
-    if verbose and quiet:
-        msg = "Cannot use both --verbose and --quiet flags"
-        raise click.BadParameter(msg)
+class ConsulInterface:
+    _active_flow: BaseFlow
+    _memory: list[BaseMessage]
+    _commands: Commands
 
-    setup_loguru_intercept(verbose=verbose, quiet=quiet)
+    def __init__(self, *, verbose: bool, quiet: bool, flow: str, message: str) -> None:
+        # Setup logging
+        if verbose and quiet:
+            msg = "Cannot use both --verbose and --quiet flags"
+            raise click.BadParameter(msg)
+        setup_loguru_intercept(verbose=verbose, quiet=quiet)
 
-    # Initialize conversation memory
-    memory: list[BaseMessage] = []
+        # Welcome message
+        print_cli_intro(FLOWS.keys())
 
-    # Welcome message
-    print_cli_intro(FLOWS.keys())
+        # setup variables
+        self._init_llm_flow(flow)
+        self._memory: list[BaseMessage] = []
+        self._commands: Commands = Commands()
 
-    # get instance of the flow
-    flow_instance = FLOWS.get(flow, ChatTask(AvailableFlow.CHAT))
+        # start main loop
+        try:
+            self._main_loop(message)
+        except KeyboardInterrupt:
+            pass
 
-    # print flow intro
-    click.echo(
-        f"\nStarting '{flow}' flow, ver: {flow_instance.config.version}, {click.style('Description:', fg='magenta')}"
-    )
-    click.echo(textwrap.fill(flow_instance.config.description, width=MAX_WIDTH))
+        except Exception as e:
+            logger.exception(f"Unexpected error in {flow} flow: {e!s}")
+            click.echo(f"Unexpected error: {e!s}", err=True)
+            raise click.ClickException(str(e)) from e
 
-    try:
+        finally:
+            print_cli_goodbye()
+
+    def _main_loop(self, init_message: str) -> None:
         while True:
             # Get user input
             try:
-                if not message:
+                if not init_message:
                     user_input = click.prompt(click.style("\nYou", fg="blue"), type=str, prompt_suffix=": ")
                 else:
-                    click.echo(f"\nYou: {textwrap.fill(message, width=MAX_WIDTH)}")
-                    user_input = message
-                    message = ""  # reset message to avoid infinite loop
+                    click.echo(f"\nYou: {textwrap.fill(init_message, width=MAX_WIDTH)}")
+                    user_input = init_message
+                    init_message = ""  # reset message to avoid infinite loop
             except click.Abort:
                 # Handle Ctrl+C gracefully
-                break
+                return
 
             # Check for exit commands
-            if user_input.lower().strip() in EXIT_COMMANDS:
-                break
+            if user_input.lower().strip() in self._commands.EXIT:
+                return
 
-            # Check for reset
-            if user_input.lower().strip() in RESET_COMMANDS:
-                memory: list[BaseMessage] = []
-                click.echo("\n" + click.style("Command", fg="red") + ": Memory cleared")
+            # Check for command
+            if user_input.lower().strip().startswith("/"):
+                system_reply = self._handle_user_command(user_input.lower().strip())
+                click.echo("\n" + click.style("Command", fg="red") + f": {system_reply}")
                 continue
 
             # Skip empty inputs
             if not user_input.strip():
-                click.echo("Please enter a message")
+                click.echo("\n" + click.style("Command", fg="red") + ": Please enter a message")
                 continue
 
             # Run the flow
             user_message = ChatMessage(role="user", content=user_input)
-            memory.append(user_message)
-            result = flow_instance.execute({"messages": memory})
+            self._memory.append(user_message)
+            result = self._active_flow.execute({"messages": self._memory})
             # Add response to memory
             assistant_message = result.messages[-1]
-            memory.append(assistant_message)
+            self._memory.append(assistant_message)
             # Display response
             click.echo("\n" + click.style("Assistant", fg="green") + ": ")
             click.echo(smart_text_wrap(assistant_message.content))
 
-    except KeyboardInterrupt:
-        pass
+    def _init_llm_flow(self, flow: str) -> None:
+        # Change the active flow
+        self._active_flow = FLOWS.get(flow, ChatTask(AvailableFlow.CHAT))
 
-    except Exception as e:
-        logger.exception(f"Unexpected error in {flow} flow: {e!s}")
-        click.echo(f"Unexpected error: {e!s}", err=True)
-        raise click.ClickException(str(e)) from e
+        # Inform the user
+        if flow not in FLOWS:
+            logger.warning(f"Flow '{flow}' not in available flows ({', '.join(FLOWS)}). Starting default flow.")
+        click.echo(
+            f"\nStarting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}, {click.style('Description:', fg='magenta')}"
+        )
+        click.echo(textwrap.fill(self._active_flow.config.description, width=MAX_WIDTH))
 
-    finally:
-        print_cli_goodbye()
+    def _handle_user_command(self, command: str) -> str:
+        # split command
+        order, info = ([*command.split(), "", ""])[:2]
+
+        if order in self._commands.RESET:
+            self._memory = []
+            return "Memory cleared!"
+
+        if order in self._commands.FLOW:
+            self._init_llm_flow(info)
+            self._memory = []
+            return f"Flow changed to {self._active_flow.config.name} and memory cleared."
+
+        if order in self._commands.SAVE:
+            logger.warning("Saving not yet implemented!")
+            return "Conversation history saved!"
+
+        return click.style("Unknown command!", fg="red")
+
+
+@click.command()
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
+@click.option("--quiet", "-q", is_flag=True, help="Only show warnings and errors")
+@click.option("--flow", "-f", type=FlowType(), default="chat", help="Select flow type")
+@click.option("--message", "-m", type=str, default="", help="Write initial message for the flow.")
+def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
+    ConsulInterface(
+        verbose=verbose,
+        quiet=quiet,
+        flow=flow,
+        message=message,
+    )
 
 
 if __name__ == "__main__":
