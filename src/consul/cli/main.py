@@ -6,6 +6,7 @@ from loguru import logger
 
 from consul.cli.logs.base import setup_loguru_intercept
 from consul.cli.utils.commands import Commands
+from consul.cli.utils.save import save_memory
 from consul.cli.utils.text import (
     MAX_WIDTH,
     print_cli_goodbye,
@@ -131,8 +132,8 @@ class ConsulInterface:
             return f"Flow changed to {self._active_flow.config.name} and memory cleared."
 
         if order in self._commands.SAVE:
-            logger.warning("Saving not yet implemented!")
-            return "Conversation history saved!"
+            path_to_saved_file = save_memory(self._memory)
+            return f"Conversation history saved in {path_to_saved_file}"
 
         return click.style("Unknown command!", fg="red")
 

@@ -1,10 +1,8 @@
 # Shortterm
 
-- Prepare tools for docs / test agents
-- Prepare custom prompt variables, options:
-  - Variables into user messages handled on the CLI / API side?
-  - Variables from config handled on the flow classes side?
-  - All variables handled on the flow side, leading to more custom flows.
+- Fix history in the CLI interface to also contains TOOL messages
+  - I'm taking only the last AI message as the answer, but I would like to keep the tool messages too
+- Add conversation saving to markdown
 - Redo tools as MCP
 - Various TODOs accross the app
 
