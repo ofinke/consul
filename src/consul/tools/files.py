@@ -29,7 +29,7 @@ def load_file(path: str) -> str:
     if not file_path.is_file():
         msg = f"File not found: {path}"
         logger.error(msg)
-        raise FileNotFoundError(msg)
+        return msg
 
     content = file_path.read_text(encoding="utf-8")
 
