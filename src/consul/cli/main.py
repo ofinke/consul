@@ -3,9 +3,11 @@ import textwrap
 import click
 from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 
-from consul.cli.logs.base import setup_loguru_intercept
 from consul.cli.utils.commands import Commands
+from consul.cli.utils.logs import LoguruHandler
 from consul.cli.utils.save import save_memory
 from consul.cli.utils.text import (
     MAX_WIDTH,
@@ -36,13 +38,20 @@ class ConsulInterface:
     _active_flow: BaseFlow
     _memory: list[BaseMessage]
     _commands: Commands
+    _spinner: yaspin
+    _log_handler: LoguruHandler
 
     def __init__(self, *, verbose: bool, quiet: bool, flow: str, message: str) -> None:
-        # Setup logging
-        if verbose and quiet:
-            msg = "Cannot use both --verbose and --quiet flags"
-            raise click.BadParameter(msg)
-        setup_loguru_intercept(verbose=verbose, quiet=quiet)
+
+        # Init CLI spinner
+        self._spinner = yaspin(
+            Spinners.noise,
+            text=click.style("Consuliting artifical neurons...", fg="cyan"),
+            color="cyan",
+        )
+
+        # Start logging intercept
+        self._log_handler = LoguruHandler(spinner=self._spinner, verbose=verbose, quiet=quiet)
 
         # Welcome message
         print_cli_intro(FLOWS.keys())
@@ -96,6 +105,7 @@ class ConsulInterface:
                 continue
 
             # Run the flow
+            self._spinner.start()
             user_message = ChatMessage(role="user", content=user_input)
             self._memory.append(user_message)
             result = self._active_flow.execute({"messages": self._memory})
@@ -104,6 +114,7 @@ class ConsulInterface:
             new_history_part = result.messages[len(self._memory) :]
             self._memory.extend(new_history_part)
             # Display response
+            self._spinner.stop()
             click.echo("\n" + click.style("Assistant", fg="green") + ": ")
             click.echo(smart_text_wrap(assistant_message.content))
 
@@ -145,6 +156,9 @@ class ConsulInterface:
 @click.option("--flow", "-f", type=FlowType(), default="chat", help="Select flow type")
 @click.option("--message", "-m", type=str, default="", help="Write initial message for the flow.")
 def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
+    if verbose and quiet:
+        msg = "Cannot use both --verbose and --quiet flags"
+        raise click.BadParameter(msg)
     ConsulInterface(
         verbose=verbose,
         quiet=quiet,

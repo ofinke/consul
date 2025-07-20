@@ -1,6 +1,7 @@
 import click
 from loguru import logger
 from loguru._handler import Message
+from yaspin import yaspin
 
 COLOR_MAP = {
     "DEBUG": "blue",
@@ -17,6 +18,7 @@ class LoguruHandler:
         """Custom loguru handler that uses click.echo for output."""
         self.level = level
         self.use_colors = use_colors
+        self.spinner = yaspin()
 
     def write(self, message: Message) -> None:
         """Handler function for loguru."""
@@ -26,10 +28,11 @@ class LoguruHandler:
         formatted = self._format_message(record)
 
         # Choose output stream and color based on level
-        if record["level"].name in ["ERROR", "CRITICAL"]:
-            click.echo(formatted, err=True, color=self.use_colors)
-        else:
-            click.echo(formatted, color=self.use_colors)
+        with self.spinner.hidden():
+            if record["level"].name in ["ERROR", "CRITICAL"]:
+                click.echo(formatted, err=True, color=self.use_colors)
+            else:
+                click.echo(formatted, color=self.use_colors)
 
     def _format_message(self, record: dict) -> str:
         """Format log message for click output."""
