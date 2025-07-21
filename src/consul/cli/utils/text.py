@@ -142,6 +142,7 @@ class TerminalHandler:
         spinner = cls.spinner()
         if getattr(spinner, "_spin_thread", None):
             spinner.stop()
+            cls._spinner = None
 
     # Logger handler
     @classmethod

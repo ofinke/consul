@@ -18,6 +18,10 @@ FLOWS = {
 }
 
 
+class CommandInterrupt(BaseException):
+    """Runtime interrupt from user command."""
+
+
 class FlowType(click.Choice):
     """Custom choice type for flow selection."""
 
@@ -54,16 +58,21 @@ class ConsulInterface:
         # start main loop
         try:
             self._main_loop(message)
-        except KeyboardInterrupt:
+
+        # handle exit program via keyboard or command interruption
+        except (KeyboardInterrupt, CommandInterrupt):
             pass
 
+        # handle unexpected exceptions
         except Exception as e:
             logger.exception(f"Unexpected error in {flow} flow: {e!s}")
             click.echo(f"Unexpected error: {e!s}", err=True)
             raise click.ClickException(str(e)) from e
 
+        # cleanup
         finally:
             TerminalHandler.echo_goodbye()
+            TerminalHandler.stop_spinner()
 
     def _main_loop(self, init_message: str) -> None:
         while True:
@@ -77,10 +86,6 @@ class ConsulInterface:
                     init_message = ""  # reset message to avoid infinite loop
             except click.Abort:
                 # Handle Ctrl+C gracefully
-                return
-
-            # Check for exit commands
-            if user_input.lower().strip() in self._commands.EXIT:
                 return
 
             # Check for command
@@ -98,11 +103,14 @@ class ConsulInterface:
             TerminalHandler.start_spinner()
             user_message = ChatMessage(role="user", content=user_input)
             self._memory.append(user_message)
+
             result = self._active_flow.execute({"messages": self._memory})
+
             # Add response to memory
             assistant_message = result.messages[-1]
             new_history_part = result.messages[len(self._memory) :]
             self._memory.extend(new_history_part)
+
             # Display response
             TerminalHandler.stop_spinner()
             click.echo("\n" + click.style("AI", fg="green") + ": ")
@@ -124,6 +132,9 @@ class ConsulInterface:
     def _handle_user_command(self, command: str) -> str:
         # split command
         order, info = ([*command.split(), "", ""])[:2]
+
+        if order in self._commands.EXIT:
+            raise CommandInterrupt
 
         if order in self._commands.RESET:
             self._memory = []
