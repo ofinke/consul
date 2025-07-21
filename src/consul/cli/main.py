@@ -1,18 +1,11 @@
-import textwrap
-
 import click
 from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
 from yaspin import yaspin
 
 from consul.cli.utils.commands import Commands
-from consul.cli.utils.logs import LoguruHandler
 from consul.cli.utils.save import save_memory
-from consul.cli.utils.text import (
-    MAX_WIDTH,
-    TerminalHandler,
-    smart_text_wrap,
-)
+from consul.cli.utils.text import TerminalHandler, smart_text_wrap
 from consul.core.config.flows import AvailableFlow
 from consul.flows.agents.react import ReactAgentFlow
 from consul.flows.base import BaseFlow
@@ -37,7 +30,6 @@ class ConsulInterface:
     _memory: list[BaseMessage]
     _commands: Commands
     _spinner: yaspin
-    _log_handler: LoguruHandler
 
     def __init__(self, *, verbose: bool, quiet: bool, flow: str, message: str) -> None:
         # Determine log level
@@ -80,7 +72,7 @@ class ConsulInterface:
                 if not init_message:
                     user_input = click.prompt(click.style("\nYou", fg="blue"), type=str, prompt_suffix=": ")
                 else:
-                    click.echo(f"\nYou: {textwrap.fill(init_message, width=MAX_WIDTH)}")
+                    click.echo(f"\nYou: {smart_text_wrap(init_message)}")
                     user_input = init_message
                     init_message = ""  # reset message to avoid infinite loop
             except click.Abort:
@@ -94,12 +86,12 @@ class ConsulInterface:
             # Check for command
             if user_input.lower().strip().startswith("/"):
                 system_reply = self._handle_user_command(user_input.lower().strip())
-                click.echo("\n" + click.style("Command", fg="red") + f": {system_reply}")
+                click.echo("\n" + click.style("Command", fg="yellow") + f": {system_reply}")
                 continue
 
             # Skip empty inputs
             if not user_input.strip():
-                click.echo("\n" + click.style("Command", fg="red") + ": Please enter a message")
+                click.echo("\n" + click.style("Command", fg="yellow") + ": Please enter a message")
                 continue
 
             # Run the flow
@@ -124,9 +116,10 @@ class ConsulInterface:
         if flow not in FLOWS:
             logger.warning(f"Flow '{flow}' not in available flows ({', '.join(FLOWS)}). Starting default flow.")
         click.echo(
-            f"\nStarting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}, {click.style('Description:', fg='magenta')}"
+            smart_text_wrap(
+                f"\nStarting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}, {click.style('Description', fg='magenta')}: {self._active_flow.config.description}"
+            )
         )
-        click.echo(textwrap.fill(self._active_flow.config.description, width=MAX_WIDTH))
 
     def _handle_user_command(self, command: str) -> str:
         # split command
