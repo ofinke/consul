@@ -11,8 +11,7 @@ from consul.cli.utils.logs import LoguruHandler
 from consul.cli.utils.save import save_memory
 from consul.cli.utils.text import (
     MAX_WIDTH,
-    print_cli_goodbye,
-    print_cli_intro,
+    TerminalHandler,
     smart_text_wrap,
 )
 from consul.core.config.flows import AvailableFlow
@@ -42,19 +41,19 @@ class ConsulInterface:
     _log_handler: LoguruHandler
 
     def __init__(self, *, verbose: bool, quiet: bool, flow: str, message: str) -> None:
+        # Determine log level
+        if quiet:
+            level = "WARNING"
+        elif verbose:
+            level = "DEBUG"
+        else:
+            level = "INFO"
 
-        # Init CLI spinner
-        self._spinner = yaspin(
-            Spinners.noise,
-            text=click.style("Consuliting artifical neurons...", fg="cyan"),
-            color="cyan",
-        )
-
-        # Start logging intercept
-        self._log_handler = LoguruHandler(spinner=self._spinner, verbose=verbose, quiet=quiet)
+        logger.remove()
+        logger.add(TerminalHandler.echo_loguru_message, level=level, format="{message}")
 
         # Welcome message
-        print_cli_intro(FLOWS.keys())
+        TerminalHandler.echo_intro(FLOWS.keys())
 
         # setup variables
         self._init_llm_flow(flow)
@@ -73,7 +72,7 @@ class ConsulInterface:
             raise click.ClickException(str(e)) from e
 
         finally:
-            print_cli_goodbye()
+            TerminalHandler.echo_goodbye()
 
     def _main_loop(self, init_message: str) -> None:
         while True:
@@ -105,7 +104,7 @@ class ConsulInterface:
                 continue
 
             # Run the flow
-            self._spinner.start()
+            TerminalHandler.start_spinner()
             user_message = ChatMessage(role="user", content=user_input)
             self._memory.append(user_message)
             result = self._active_flow.execute({"messages": self._memory})
@@ -114,7 +113,7 @@ class ConsulInterface:
             new_history_part = result.messages[len(self._memory) :]
             self._memory.extend(new_history_part)
             # Display response
-            self._spinner.stop()
+            TerminalHandler.stop_spinner()
             click.echo("\n" + click.style("Assistant", fg="green") + ": ")
             click.echo(smart_text_wrap(assistant_message.content))
 
