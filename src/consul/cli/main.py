@@ -4,7 +4,6 @@ import click
 from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
 from yaspin import yaspin
-from yaspin.spinners import Spinners
 
 from consul.cli.utils.commands import Commands
 from consul.cli.utils.logs import LoguruHandler
@@ -114,7 +113,7 @@ class ConsulInterface:
             self._memory.extend(new_history_part)
             # Display response
             TerminalHandler.stop_spinner()
-            click.echo("\n" + click.style("Assistant", fg="green") + ": ")
+            click.echo("\n" + click.style("AI", fg="green") + ": ")
             click.echo(smart_text_wrap(assistant_message.content))
 
     def _init_llm_flow(self, flow: str) -> None:

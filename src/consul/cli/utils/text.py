@@ -146,6 +146,11 @@ class TerminalHandler:
     # Logger handler
     @classmethod
     def echo_loguru_message(cls, message: "loguru.Message") -> None:
+        """
+        Logging handler which echoes loguru logger messages into click.echo while keeping its formatting and safely
+        handling the spinner instance.
+        """
+
         def emit_message(record: dict[str, Any], formatted: str) -> None:
             """Echo log message with log level taken into account."""
             formatted = smart_text_wrap(formatted)
@@ -174,7 +179,7 @@ class TerminalHandler:
         record = message.record
         formatted = format_message(record)
 
-        # print message while hiding spinner.
+        # echo message while hiding spinner.
         spinner = cls.spinner()
         if getattr(spinner, "_spin_thread", None):
             with spinner.hidden():

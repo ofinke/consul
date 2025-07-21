@@ -1,7 +1,8 @@
 # Shortterm
 
-- Fix history in the CLI interface to also contains TOOL messages
-  - I'm taking only the last AI message as the answer, but I would like to keep the tool messages too
+- Unification of text outputs into terminal using TerminalHandler
+  - Separate markdown styler and smart text wrap so I can select which one is called. Or keep it and add markdown formatting as a flad?
+  - What and how I can handle message formatting and emitting from CLI interface? I'm now mainly interested in colors of You, Assistant and Command
 - Add conversation saving to markdown
 - Redo tools as MCP
 - Various TODOs accross the app
