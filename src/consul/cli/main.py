@@ -1,11 +1,11 @@
 import click
 from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
-from yaspin import yaspin
 
 from consul.cli.utils.commands import Commands
 from consul.cli.utils.save import save_memory
 from consul.cli.utils.text import TerminalHandler, smart_text_wrap
+from consul.cli.utils.user_args import UserArgs, consul_user_args
 from consul.core.config.flows import AvailableFlow
 from consul.flows.agents.react import ReactAgentFlow
 from consul.flows.base import BaseFlow
@@ -22,24 +22,17 @@ class CommandInterrupt(BaseException):
     """Runtime interrupt from user command."""
 
 
-class FlowType(click.Choice):
-    """Custom choice type for flow selection."""
-
-    def __init__(self) -> None:
-        super().__init__(FLOWS.keys(), case_sensitive=False)
-
-
 class ConsulInterface:
     _active_flow: BaseFlow
     _memory: list[BaseMessage]
     _commands: Commands
-    _spinner: yaspin
+    _user_args: UserArgs
 
-    def __init__(self, *, verbose: bool, quiet: bool, flow: str, message: str) -> None:
+    def __init__(self, user_args: UserArgs) -> None:
         # Determine log level
-        if quiet:
+        if user_args.quiet:
             level = "WARNING"
-        elif verbose:
+        elif user_args.verbose:
             level = "DEBUG"
         else:
             level = "INFO"
@@ -47,17 +40,21 @@ class ConsulInterface:
         logger.remove()
         logger.add(TerminalHandler.echo_loguru_message, level=level, format="{message}")
 
-        # Welcome message
-        TerminalHandler.echo_intro(FLOWS.keys())
-
         # setup variables
-        self._init_llm_flow(flow)
+        self._user_args = user_args
         self._memory: list[BaseMessage] = []
         self._commands: Commands = Commands()
 
+    def start_interface(self) -> None:
+        # Welcome message
+        TerminalHandler.echo_intro(FLOWS.keys())
+
+        # initiate first flow
+        self._init_llm_flow(self._user_args.flow)
+
         # start main loop
         try:
-            self._main_loop(message)
+            self._main_loop()
 
         # handle exit program via keyboard or command interruption
         except (KeyboardInterrupt, CommandInterrupt):
@@ -65,7 +62,7 @@ class ConsulInterface:
 
         # handle unexpected exceptions
         except Exception as e:
-            logger.exception(f"Unexpected error in {flow} flow: {e!s}")
+            logger.exception(f"Unexpected error in {self._user_args.flow} flow: {e!s}")
             click.echo(f"Unexpected error: {e!s}", err=True)
             raise click.ClickException(str(e)) from e
 
@@ -74,16 +71,16 @@ class ConsulInterface:
             TerminalHandler.echo_goodbye()
             TerminalHandler.stop_spinner()
 
-    def _main_loop(self, init_message: str) -> None:
+    def _main_loop(self) -> None:
         while True:
             # Get user input
             try:
-                if not init_message:
+                if not self._user_args.message:
                     user_input = click.prompt(click.style("\nYou", fg="blue"), type=str, prompt_suffix=": ")
                 else:
-                    click.echo(f"\nYou: {smart_text_wrap(init_message)}")
-                    user_input = init_message
-                    init_message = ""  # reset message to avoid infinite loop
+                    click.echo(f"\nYou: {smart_text_wrap(self._user_args.message)}")
+                    user_input = self._user_args.message
+                    self._user_args.message = ""  # reset message to avoid infinite loop
             except click.Abort:
                 # Handle Ctrl+C gracefully
                 return
@@ -152,21 +149,10 @@ class ConsulInterface:
         return click.style("Unknown command!", fg="red")
 
 
-@click.command()
-@click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
-@click.option("--quiet", "-q", is_flag=True, help="Only show warnings and errors")
-@click.option("--flow", "-f", type=FlowType(), default="chat", help="Select flow type")
-@click.option("--message", "-m", type=str, default="", help="Write initial message for the flow.")
-def main(*, verbose: bool, quiet: bool, flow: str, message: str) -> None:
-    if verbose and quiet:
-        msg = "Cannot use both --verbose and --quiet flags"
-        raise click.BadParameter(msg)
-    ConsulInterface(
-        verbose=verbose,
-        quiet=quiet,
-        flow=flow,
-        message=message,
-    )
+@consul_user_args
+def main(user_args: UserArgs) -> None:
+    cli = ConsulInterface(user_args)
+    cli.start_interface()
 
 
 if __name__ == "__main__":

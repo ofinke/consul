@@ -111,18 +111,22 @@ def apply_markdown_styling(text: str, in_codeblock: bool = False) -> tuple[str, 
 
 
 class TerminalHandler:
-    """Unifying class to handle all outputs into terminal."""
+    """
+    Singleton class for all terminal I/O operations in Consul. Unifying class to handle all outputs into terminal.
+    Use only classmethods; do not instantiate.
+    """
 
     _max_width: int = MAX_WIDTH  # Don't change this bellow the MIN_WIDTH
     _main_col: str = "cyan"
     _spinner: yaspin = None
     _use_colors: bool = True
 
-    def __init__(self):
-        pass
-
     @classmethod
-    def spinner(cls) -> yaspin:
+    def _init_spinner(cls) -> yaspin:
+        """
+        Private method to initiate spinner instance. If no special shenanigans with spinner is planned, this doesn't
+        need to be called.
+        """
         if cls._spinner is None:
             cls._spinner = yaspin(
                 Spinners.noise,
@@ -133,13 +137,15 @@ class TerminalHandler:
 
     @classmethod
     def start_spinner(cls) -> None:
-        spinner = cls.spinner()
+        """Start yaspin spinner in the terminal."""
+        spinner = cls._init_spinner()
         if not getattr(spinner, "_spin_thread", None):
             spinner.start()
 
     @classmethod
     def stop_spinner(cls) -> None:
-        spinner = cls.spinner()
+        """Stop yaspin spinnner in the terminal."""
+        spinner = cls._init_spinner()
         if getattr(spinner, "_spin_thread", None):
             spinner.stop()
             cls._spinner = None
@@ -181,7 +187,7 @@ class TerminalHandler:
         formatted = format_message(record)
 
         # echo message while hiding spinner.
-        spinner = cls.spinner()
+        spinner = cls._init_spinner()
         if getattr(spinner, "_spin_thread", None):
             with spinner.hidden():
                 emit_message(record, formatted)
@@ -191,7 +197,7 @@ class TerminalHandler:
     # App intro and outro messages
     @classmethod
     def echo_intro(cls, flows: list[str]) -> None:
-        """Prints introductory text to CLI interface of Consul."""
+        """Display introductory text to CLI interface of Consul."""
         # prepare intro message
         intro_message = f"Welcome to the Consul CLI! Consul contains set of simple LLM flows and agents for solving small daily problems. Flow can be selected by starting consul with the '--flow' '-f' flag, available flows are: {', '.join(flows)}. During runtime, following commands can be used. {Commands.get_instructions()}."  # noqa: E501
 
