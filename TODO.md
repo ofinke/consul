@@ -3,6 +3,7 @@
 - Add conversation saving to markdown
 - Redo tools as MCP
 - Various TODOs accross the app
+- Message informing about tokens usage
 
 # Next steps
 

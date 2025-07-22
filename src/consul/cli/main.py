@@ -75,7 +75,6 @@ class ConsulInterface:
             # Get user input
             try:
                 if not self._user_args.message:
-                    # user_input = click.prompt(click.style("\nUser", fg="blue"), type=str, prompt_suffix=": ")
                     user_input = TerminalHandler.prompt_user_input()
                 else:
                     TerminalHandler.display_message(f"User: {self._user_args.message}")
@@ -93,7 +92,7 @@ class ConsulInterface:
 
             # Skip empty inputs
             if not user_input.strip():
-                TerminalHandler.display_message("Command: Please enter a message")
+                TerminalHandler.display_message("Command:Please enter a message")
                 continue
 
             # Run the flow
@@ -111,7 +110,7 @@ class ConsulInterface:
 
             # Display response
             TerminalHandler.stop_spinner()
-            TerminalHandler.display_message(f"AI: {assistant_message.content}", format_markdown=True)
+            TerminalHandler.display_message(f"Assistant:{assistant_message.content}", format_markdown=True)
 
     def _init_llm_flow(self, flow: str) -> None:
         # Change the active flow
@@ -121,7 +120,7 @@ class ConsulInterface:
         if flow not in FLOWS:
             logger.warning(f"Flow '{flow}' not in available flows ({', '.join(FLOWS)}). Starting default flow.")
         TerminalHandler.display_message(
-            f"Starting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}, {click.style('Description', fg='magenta')}: {self._active_flow.config.description}"  # noqa: E501
+            f"Starting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}; {self._active_flow.config.description}"  # noqa: E501
         )
 
     def _handle_user_command(self, command: str) -> str:
@@ -144,7 +143,7 @@ class ConsulInterface:
         if order in self._commands.SAVE:
             path_to_saved_file = save_memory(self._memory)
             return f"Conversation history saved in {path_to_saved_file}"
-        return click.style("Unknown command!", fg="red")
+        return "Unknown command!"
 
 
 @consul_user_args

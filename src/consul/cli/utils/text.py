@@ -2,6 +2,7 @@ import re
 import textwrap
 from typing import TYPE_CHECKING, Any
 
+from prompt_toolkit import prompt
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -126,14 +127,14 @@ class TerminalHandler:
             message_text = record["message"]
 
             if not cls._use_colors:
-                return Text(f"→ [{level}] {record['time'].strftime('%H:%M:%S %Z')} {message_text}")
+                return Text(f"→ [{level}] {record['time'].strftime('%H:%M:%S ')} {message_text}")
 
             color = log_level_color_map.get(level, "white")
 
             formatted = Text()
             formatted.append("→ ", style="white")
             formatted.append(f"[{level}] ", style=color)
-            formatted.append(record["time"].strftime("%H:%M:%S %Z "), style="white")
+            formatted.append(record["time"].strftime("%H:%M:%S "), style="white")
             formatted.append(message_text, style=color)
 
             return formatted
@@ -152,20 +153,19 @@ class TerminalHandler:
 
     @classmethod
     def prompt_user_input(cls) -> str:
-        """Get user input."""
+        """Get user input with persistent prompt and proper wrapping."""
         console = cls._init_console()
-
         try:
-            # Print the styled prompt using Rich
-            prompt_text = Text("\nUser: ", style="blue")
-            console.print(prompt_text, end="")
-
-            # Use built-in input() which has full readline support
-            user_input = input()
+            console.print("\n", end="")
+            console.print(Text("User:", style="blue"))
+            user_input = prompt(
+                "→ ",  # Simple string prompt
+                mouse_support=True,
+                wrap_lines=True,
+            )
         except KeyboardInterrupt:
             raise
         except EOFError as e:
-            # Handle Ctrl+D
             raise KeyboardInterrupt from e
 
         return user_input
@@ -176,11 +176,11 @@ class TerminalHandler:
 
         def extract_and_color_prefix(text: str) -> tuple[Text | None, str]:
             """Extract prefix and return colored prefix + remaining text."""
-            prefixes_colors = {"User:": "blue", "AI:": "green", "Command:": "red"}
+            prefixes_colors = {"User:": "blue", "Assistant:": "green", "Command:": "red"}
 
             for prefix, color in prefixes_colors.items():
                 if text.startswith(prefix):
-                    colored_prefix = Text(prefix[:-1], style=color) + Text(": ")
+                    colored_prefix = Text(prefix, style=color) + Text("\n→ ", style="white")
                     remaining_text = text[len(prefix) :]
                     return colored_prefix, remaining_text
 
@@ -201,14 +201,12 @@ class TerminalHandler:
 
         try:
             console.print("\n", end="")
-
             # Print colored prefix if it exists
             if colored_prefix:
                 console.print(colored_prefix, end="")
-
             # Print content (either as markdown or plain text)
             if format_markdown:
-                md = Markdown(content)
+                md = Markdown(content, code_theme="lightbulb")
                 console.print(md)
             else:
                 console.print(content)
