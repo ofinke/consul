@@ -2,6 +2,7 @@
 
 - Add conversation saving to markdown
 - Redo tools as MCP
+- Add tool for the tester agent to run the tests.
 - Various TODOs accross the app
 - Message informing about tokens usage
 

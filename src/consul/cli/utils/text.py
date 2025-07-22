@@ -160,8 +160,10 @@ class TerminalHandler:
             console.print(Text("User:", style="blue"))
             user_input = prompt(
                 "→ ",  # Simple string prompt
-                mouse_support=True,
+                # mouse_support=True,
                 wrap_lines=True,
+                enable_history_search=True,
+                search_ignore_case=True,
             )
         except KeyboardInterrupt:
             raise
