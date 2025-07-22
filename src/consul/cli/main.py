@@ -4,7 +4,7 @@ from loguru import logger
 
 from consul.cli.utils.commands import Commands
 from consul.cli.utils.save import save_memory
-from consul.cli.utils.text import TerminalHandler, smart_text_wrap
+from consul.cli.utils.text import TerminalHandler
 from consul.cli.utils.user_args import UserArgs, consul_user_args
 from consul.core.config.flows import AvailableFlow
 from consul.flows.agents.react import ReactAgentFlow
@@ -63,7 +63,6 @@ class ConsulInterface:
         # handle unexpected exceptions
         except Exception as e:
             logger.exception(f"Unexpected error in {self._user_args.flow} flow: {e!s}")
-            click.echo(f"Unexpected error: {e!s}", err=True)
             raise click.ClickException(str(e)) from e
 
         # cleanup
@@ -76,9 +75,9 @@ class ConsulInterface:
             # Get user input
             try:
                 if not self._user_args.message:
-                    user_input = click.prompt(click.style("\nYou", fg="blue"), type=str, prompt_suffix=": ")
+                    user_input = click.prompt(click.style("\nUser", fg="blue"), type=str, prompt_suffix=": ")
                 else:
-                    click.echo(f"\nYou: {smart_text_wrap(self._user_args.message)}")
+                    TerminalHandler.echo_message(f"User: {self._user_args.message}")
                     user_input = self._user_args.message
                     self._user_args.message = ""  # reset message to avoid infinite loop
             except click.Abort:
@@ -88,30 +87,30 @@ class ConsulInterface:
             # Check for command
             if user_input.lower().strip().startswith("/"):
                 system_reply = self._handle_user_command(user_input.lower().strip())
-                click.echo("\n" + click.style("Command", fg="yellow") + f": {system_reply}")
+                TerminalHandler.echo_message(f"Command: {system_reply}")
                 continue
 
             # Skip empty inputs
             if not user_input.strip():
-                click.echo("\n" + click.style("Command", fg="yellow") + ": Please enter a message")
+                TerminalHandler.echo_message("Command: Please enter a message")
                 continue
 
             # Run the flow
             TerminalHandler.start_spinner()
+
+            # prepare history and call the flow
             user_message = ChatMessage(role="user", content=user_input)
             self._memory.append(user_message)
-
             result = self._active_flow.execute({"messages": self._memory})
 
-            # Add response to memory
+            # Process response
             assistant_message = result.messages[-1]
             new_history_part = result.messages[len(self._memory) :]
             self._memory.extend(new_history_part)
 
             # Display response
             TerminalHandler.stop_spinner()
-            click.echo("\n" + click.style("AI", fg="green") + ": ")
-            click.echo(smart_text_wrap(assistant_message.content))
+            TerminalHandler.echo_message(f"AI: {assistant_message.content}", format_markdown=True)
 
     def _init_llm_flow(self, flow: str) -> None:
         # Change the active flow
@@ -120,32 +119,30 @@ class ConsulInterface:
         # Inform the user
         if flow not in FLOWS:
             logger.warning(f"Flow '{flow}' not in available flows ({', '.join(FLOWS)}). Starting default flow.")
-        click.echo(
-            smart_text_wrap(
-                f"\nStarting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}, {click.style('Description', fg='magenta')}: {self._active_flow.config.description}"
-            )
+        TerminalHandler.echo_message(
+            f"Starting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}, {click.style('Description', fg='magenta')}: {self._active_flow.config.description}"  # noqa: E501
         )
 
     def _handle_user_command(self, command: str) -> str:
+        """Private method for handling user commands starting with '/' character."""
         # split command
         order, info = ([*command.split(), "", ""])[:2]
-
+        # Exit app
         if order in self._commands.EXIT:
             raise CommandInterrupt
-
+        # clear chat history
         if order in self._commands.RESET:
             self._memory = []
             return "Memory cleared!"
-
+        # change used flow
         if order in self._commands.FLOW:
             self._init_llm_flow(info)
             self._memory = []
             return f"Flow changed to {self._active_flow.config.name} and memory cleared."
-
+        # save data to markdown
         if order in self._commands.SAVE:
             path_to_saved_file = save_memory(self._memory)
             return f"Conversation history saved in {path_to_saved_file}"
-
         return click.style("Unknown command!", fg="red")
 
 
