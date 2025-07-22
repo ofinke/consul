@@ -111,10 +111,7 @@ def apply_markdown_styling(text: str, in_codeblock: bool = False) -> tuple[str, 
 
 
 class TerminalHandler:
-    """
-    Singleton class for all terminal I/O operations in Consul. Unifying class to handle all outputs into terminal.
-    Use only classmethods; do not instantiate.
-    """
+    """Singleton class for all terminal I/O operations in Consul. Use only classmethods; do not instantiate."""
 
     _max_width: int = MAX_WIDTH  # Don't change this bellow the MIN_WIDTH
     _main_col: str = "cyan"
@@ -124,12 +121,12 @@ class TerminalHandler:
     @classmethod
     def _init_spinner(cls) -> yaspin:
         """
-        Private method to initiate spinner instance. If no special shenanigans with spinner is planned, this doesn't
+        Private method to initiate spinner instance. If no special shenanigans with spinner are planned, this doesn't
         need to be called.
         """
         if cls._spinner is None:
             cls._spinner = yaspin(
-                Spinners.noise,
+                Spinners.arrow,
                 text=click.style("Consuliting artificial neurons...", fg=cls._main_col),
                 color=cls._main_col,
             )
@@ -181,8 +178,14 @@ class TerminalHandler:
             if not cls._use_colors:
                 return f"[{level}] {message}"
             color = log_level_color_map.get(level, "white")
-            return click.style(f"> [{level}] {message}", fg=color)
+            return (
+                "→ "
+                + click.style(f"[{level}] ", fg=color)
+                + record["time"].strftime("%H:%M:%S %Z")
+                + click.style(f" {message}", fg=color)
+            )
 
+        # format message according to the logger level
         record = message.record
         formatted = format_message(record)
 
@@ -193,6 +196,36 @@ class TerminalHandler:
                 emit_message(record, formatted)
         else:
             emit_message(record, formatted)
+
+    # Echo message into the terminal
+    @classmethod
+    def echo_message(cls, message: str, *, format_markdown: bool = False) -> None:
+        """Echo formatted message into terminal."""
+        # apply text wrap
+        message = cls.apply_smart_text_wrap(message)
+        # apply markdown format
+        if format_markdown:
+            message = cls.apply_markdown_styling(message)
+        # apply color to text prefix ("User:", "AI:", "Command:")
+        prefixes_colors = {"User:": "blue", "AI:": "green", "Command:": "red"}
+        for prefix, color in prefixes_colors.items():
+            if message.startswith(prefix):
+                styled_prefix = click.style(prefix[:-1], fg=color)
+                message = f"{styled_prefix}:{message[len(prefix) :]}"
+                break
+        # echo
+        click.echo(message)
+        raise NotImplementedError
+
+    @classmethod
+    def apply_smart_text_wrap(cls, message: str) -> str:
+        """Wraps text according to max_width while preserving list formatting and indentation."""
+        raise NotImplementedError
+
+    @classmethod
+    def apply_markdown_styling(cls, message: str) -> str:
+        """Converts predefined styles to markdown for a pretty print in terminal."""
+        raise NotImplementedError
 
     # App intro and outro messages
     @classmethod
