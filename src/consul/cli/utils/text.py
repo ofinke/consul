@@ -2,9 +2,11 @@ import re
 import textwrap
 from typing import TYPE_CHECKING, Any
 
-import click
-from yaspin import yaspin
-from yaspin.spinners import Spinners
+from rich.console import Console
+from rich.live import Live
+from rich.markdown import Markdown
+from rich.spinner import Spinner
+from rich.text import Text
 
 from consul.cli.utils.commands import Commands
 
@@ -13,28 +15,39 @@ if TYPE_CHECKING:
 
 MAX_WIDTH = 120
 MIN_WIDTH = 66
-char_scale = int((MAX_WIDTH - MIN_WIDTH) / 2)
 
-ASCII_ART_LOGO = f"""
 
-{char_scale * "░"}░   █████████   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ████   {char_scale * "░"}
-{char_scale * " "}   ███░░░░░███                                            ░░███
-{char_scale * " "}  ███     ░░░    ██████   ████████     █████   █████ ████  ░███
-{char_scale * " "} ░███           ███░░███ ░░███░░███   ███░░   ░░███ ░███   ░███
-{char_scale * " "} ░███          ░███ ░███  ░███ ░███  ░░█████   ░███ ░███   ░███
-{char_scale * " "} ░░███     ███ ░███ ░███  ░███ ░███   ░░░░███  ░███ ░███   ░███
-{char_scale * " "}  ░░█████████  ░░██████   ████ █████  ██████   ░░████████  █████
-{char_scale * "░"}   ░░░░░░░░░    ░░░░░░   ░░░░ ░░░░░  ░░░░░░     ░░░░░░░░  ░░░░░   {char_scale * "░"}
+def get_ascii_art_logo(console_width: int) -> Text:
+    """Generate ASCII art logo scaled to console width."""
+    char_scale = max(0, int((console_width - MIN_WIDTH) / 2))
 
-"""
+    logo_lines = [
+        "",
+        f"{'░' * char_scale}░   █████████   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ████   {'░' * char_scale}",
+        f"{' ' * char_scale}   ███░░░░░███                                            ░░███",
+        f"{' ' * char_scale}  ███     ░░░    ██████   ████████     █████   █████ ████  ░███",
+        f"{' ' * char_scale} ░███           ███░░███ ░░███░░███   ███░░   ░░███ ░███   ░███",
+        f"{' ' * char_scale} ░███          ░███ ░███  ░███ ░███  ░░█████   ░███ ░███   ░███",
+        f"{' ' * char_scale} ░░███     ███ ░███ ░███  ░███ ░███   ░░░░███  ░███ ░███   ░███",
+        f"{' ' * char_scale}  ░░█████████  ░░██████   ████ █████  ██████   ░░████████  █████",
+        f"{'░' * char_scale}   ░░░░░░░░░    ░░░░░░   ░░░░ ░░░░░  ░░░░░░     ░░░░░░░░  ░░░░░   {'░' * char_scale}",
+        "",
+    ]
+
+    logo_text = Text()
+    for line in logo_lines:
+        logo_text.append(line + "\n", style="cyan")
+
+    return logo_text
 
 
 class TerminalHandler:
     """Singleton class for all terminal I/O operations in Consul. Use only classmethods; do not instantiate."""
 
-    _max_width: int = MAX_WIDTH  # Don't change this bellow the MIN_WIDTH
+    _console: Console | None = None
+    _live_spinner: Live | None = None
+    _spinner: Spinner | None = None
     _main_col: str = "cyan"
-    _spinner: yaspin = None
     _use_colors: bool = True
 
     def __new__(cls) -> None:
@@ -43,52 +56,63 @@ class TerminalHandler:
         raise RuntimeError(msg)
 
     @classmethod
-    def _init_spinner(cls) -> yaspin:
-        """
-        Private method to initiate spinner instance. If no special shenanigans with spinner are planned, this doesn't
-        need to be called.
-        """
-        if cls._spinner is None:
-            cls._spinner = yaspin(
-                Spinners.arrow,
-                text=click.style("Consuliting artificial neurons...", fg=cls._main_col),
-                color=cls._main_col,
+    def _init_console(cls) -> Console:
+        """Initialize Rich console if not already done."""
+        if cls._console is None:
+            cls._console = Console(
+                width=MAX_WIDTH,
+                color_system="auto" if cls._use_colors else None,
+                force_terminal=True,
+                highlight=False,  # Disable automatic highlighting
             )
-        return cls._spinner
+        return cls._console
+
+    @classmethod
+    def _init_spinner(cls) -> tuple[Live, Spinner]:
+        """Initialize spinner components."""
+        if cls._live_spinner is None or cls._spinner is None:
+            spinner_text = Text("Consuliting artificial neurons...", style=cls._main_col)
+            cls._spinner = Spinner("arrow", text=spinner_text, style=cls._main_col)
+            cls._live_spinner = Live(
+                cls._spinner,
+                console=cls._init_console(),
+                refresh_per_second=10,
+                transient=True,  # Make spinner transient so it disappears when stopped
+            )
+        return cls._live_spinner, cls._spinner
 
     @classmethod
     def start_spinner(cls) -> None:
-        """Start yaspin spinner in the terminal."""
-        spinner = cls._init_spinner()
-        if not getattr(spinner, "_spin_thread", None):
-            spinner.start()
+        """Start Rich spinner in the terminal."""
+        live_spinner, _ = cls._init_spinner()
+        if not live_spinner.is_started:
+            live_spinner.start()
 
     @classmethod
     def stop_spinner(cls) -> None:
-        """Stop yaspin spinnner in the terminal."""
-        spinner = cls._init_spinner()
-        if getattr(spinner, "_spin_thread", None):
-            spinner.stop()
+        """Stop Rich spinner in the terminal."""
+        if cls._live_spinner and cls._live_spinner.is_started:
+            cls._live_spinner.stop()
+            cls._live_spinner = None
             cls._spinner = None
 
-    # Logger handler
     @classmethod
-    def echo_loguru_message(cls, message: "loguru.Message") -> None:
+    def display_loguru_message(cls, message: "loguru.Message") -> None:
         """
-        Logging handler which echoes loguru logger messages into click.echo while keeping its formatting and safely
-        handling the spinner instance.
+        Logging handler which echoes loguru logger messages into Rich console while keeping its formatting
+        and safely handling the spinner instance.
         """
 
-        def emit_message(record: dict[str, Any], formatted: str) -> None:
+        def emit_message(record: dict[str, Any], formatted_text: Text) -> None:
             """Echo log message with log level taken into account."""
-            formatted = cls.apply_smart_text_wrap(formatted)
+            console = cls._init_console()
             if record["level"].name in ["ERROR", "CRITICAL"]:
-                click.echo(formatted, err=True, color=cls._use_colors)
+                console.print(formatted_text, stderr=True)
             else:
-                click.echo(formatted, color=cls._use_colors)
+                console.print(formatted_text)
 
-        def format_message(record: dict[str, Any]) -> str:
-            """Format log message according to it's level."""
+        def format_message(record: dict[str, Any]) -> Text:
+            """Format log message according to its level."""
             log_level_color_map = {
                 "DEBUG": "blue",
                 "INFO": "white",
@@ -97,55 +121,108 @@ class TerminalHandler:
                 "ERROR": "red",
                 "CRITICAL": "red",
             }
+
             level = record["level"].name
-            message = record["message"]
+            message_text = record["message"]
+
             if not cls._use_colors:
-                return f"[{level}] {message}"
+                return Text(f"→ [{level}] {record['time'].strftime('%H:%M:%S %Z')} {message_text}")
+
             color = log_level_color_map.get(level, "white")
-            return (
-                "→ "
-                + click.style(f"[{level}] ", fg=color)
-                + record["time"].strftime("%H:%M:%S %Z")
-                + click.style(f" {message}", fg=color)
-            )
 
-        # format message according to the logger level
+            formatted = Text()
+            formatted.append("→ ", style="white")
+            formatted.append(f"[{level}] ", style=color)
+            formatted.append(record["time"].strftime("%H:%M:%S %Z "), style="white")
+            formatted.append(message_text, style=color)
+
+            return formatted
+
+        # Format message according to the logger level
         record = message.record
-        formatted = format_message(record)
+        formatted_text = format_message(record)
 
-        # echo message while hiding spinner.
-        spinner = cls._init_spinner()
-        if getattr(spinner, "_spin_thread", None):
-            with spinner.hidden():
-                emit_message(record, formatted)
+        # Echo message while hiding spinner
+        if cls._live_spinner and cls._live_spinner.is_started:
+            cls._live_spinner.stop()
+            emit_message(record, formatted_text)
+            cls._live_spinner.start()
         else:
-            emit_message(record, formatted)
+            emit_message(record, formatted_text)
 
-    # Echo message into the terminal
     @classmethod
-    def echo_message(cls, message: str, *, format_markdown: bool = False) -> None:
+    def prompt_user_input(cls) -> str:
+        """Get user input."""
+        console = cls._init_console()
+
+        try:
+            # Print the styled prompt using Rich
+            prompt_text = Text("\nUser: ", style="blue")
+            console.print(prompt_text, end="")
+
+            # Use built-in input() which has full readline support
+            user_input = input()
+        except KeyboardInterrupt:
+            raise
+        except EOFError as e:
+            # Handle Ctrl+D
+            raise KeyboardInterrupt from e
+
+        return user_input
+
+    @classmethod
+    def display_message(cls, message: str, *, format_markdown: bool = False) -> None:
         """Echo formatted message into terminal."""
-        # apply text wrap
-        message = cls.apply_smart_text_wrap(message)
-        # apply markdown format
-        if format_markdown:
-            message = cls.apply_markdown_styling(message)
-        # apply color to text prefix ("User:", "AI:", "Command:")
-        prefixes_colors = {"User:": "blue", "AI:": "green", "Command:": "red"}
-        for prefix, color in prefixes_colors.items():
-            if message.startswith(prefix):
-                styled_prefix = click.style(prefix[:-1], fg=color)
-                message = f"{styled_prefix}:{message[len(prefix) :]}"
-                break
-        # echo
-        click.echo("\n" + message)
 
-    @classmethod
-    def apply_smart_text_wrap(cls, message: str) -> str:
+        def extract_and_color_prefix(text: str) -> tuple[Text | None, str]:
+            """Extract prefix and return colored prefix + remaining text."""
+            prefixes_colors = {"User:": "blue", "AI:": "green", "Command:": "red"}
+
+            for prefix, color in prefixes_colors.items():
+                if text.startswith(prefix):
+                    colored_prefix = Text(prefix[:-1], style=color) + Text(": ")
+                    remaining_text = text[len(prefix) :]
+                    return colored_prefix, remaining_text
+
+            return None, text
+
+        console = cls._init_console()
+
+        # Always apply text wrap first
+        message = cls.apply_smart_text_wrap(message)
+
+        # Extract and color prefix, get remaining content
+        colored_prefix, content = extract_and_color_prefix(message)
+
+        # Stop spinner temporarily if running
+        spinner_was_running = cls._live_spinner and cls._live_spinner.is_started
+        if spinner_was_running:
+            cls.stop_spinner()
+
+        try:
+            console.print("\n", end="")
+
+            # Print colored prefix if it exists
+            if colored_prefix:
+                console.print(colored_prefix, end="")
+
+            # Print content (either as markdown or plain text)
+            if format_markdown:
+                md = Markdown(content)
+                console.print(md)
+            else:
+                console.print(content)
+
+        finally:
+            if spinner_was_running:
+                cls.start_spinner()
+
+    @staticmethod
+    def apply_smart_text_wrap(message: str) -> str:
         """Wraps text according to max_width while preserving list formatting and indentation."""
         lines = message.split("\n")
         wrapped_lines = []
-        # go through each line
+
         for line in lines:
             if len(line) <= MAX_WIDTH:
                 wrapped_lines.append(line)
@@ -163,76 +240,31 @@ class TerminalHandler:
                     leading_space_match = re.match(r"^(\s*)", line)
                     leading_space = leading_space_match.group(1) if leading_space_match else ""
                     wrapped = textwrap.fill(line, width=MAX_WIDTH, initial_indent="", subsequent_indent=leading_space)
-
                 wrapped_lines.append(wrapped)
+
         return "\n".join(wrapped_lines)
 
     @classmethod
-    def apply_markdown_styling(cls, message: str) -> str:
-        """
-        Converts predefined styles to markdown for a pretty print in terminal.
-        Applies styling to the entire message (multi-line supported). Supports:
-            - Inline code: `code`
-            - Code blocks: ```code block```
-            - Bold: **bold** or __bold__.
-        """
-
-        def style_codeblock(match: re.Match) -> str:
-            code_content = match.group(2)
-            return click.style(code_content, fg=(0, 0, 0))
-
-        def style_inline_code(match: re.Match) -> str:
-            code_content = match.group(1)
-            return click.style(code_content, fg=(0, 0, 0))
-
-        def style_bold(match: re.Match) -> str:
-            bold_content = match.group(1)
-            return click.style(bold_content, fg="cyan", bold=True)
-
-        # Only matches fenced code blocks surrounded by newlines
-        codeblock_pattern = re.compile(r"(^|\n)```(?:\w+)?\n([\s\S]*?)\n```(\n|$)", re.MULTILINE)
-
-        # iterate over codeblock patterns
-        segments = []
-        last_end = 0
-        for match in codeblock_pattern.finditer(message):
-            # Non-code before this code block
-            non_code = message[last_end : match.start()]
-            if non_code:
-                non_code = re.sub(r"`([^`]+)`", style_inline_code, non_code)
-                non_code = re.sub(r"\*\*([^*]+)\*\*", style_bold, non_code)
-                non_code = re.sub(r"__([^_]+)__", style_bold, non_code)
-                segments.append(non_code)
-            code = style_codeblock(match)
-            segments.append(code)
-            last_end = match.end()
-        remainder = message[last_end:]
-        if remainder:
-            remainder = re.sub(r"`([^`]+)`", style_inline_code, remainder)
-            remainder = re.sub(r"\*\*([^*]+)\*\*", style_bold, remainder)
-            remainder = re.sub(r"__([^_]+)__", style_bold, remainder)
-            segments.append(remainder)
-
-        return "\n".join(segments)
-
-    # App intro and outro messages
-    @classmethod
     def echo_intro(cls, flows: list[str]) -> None:
         """Display introductory text to CLI interface of Consul."""
-        # prepare intro message
-        intro_message = f"Welcome to the Consul CLI! Consul contains set of simple LLM flows and agents for solving small daily problems. Flow can be selected by starting consul with the '--flow' '-f' flag, available flows are: {', '.join(flows)}. During runtime, following commands can be used. {Commands.get_instructions()}."  # noqa: E501
+        console = cls._init_console()
+        console_width = console.size.width
 
-        click.echo(click.style(ASCII_ART_LOGO, fg=cls._main_col))
-        click.echo(click.style(textwrap.fill(intro_message, width=cls._max_width), fg=cls._main_col))
-        click.echo(click.style("-" * cls._max_width, fg=cls._main_col))
+        # Generate and display logo
+        console.print(get_ascii_art_logo(console_width), end="")
+        # Prepare intro message
+        intro_message = f"Welcome to the Consul CLI! Consul contains set of simple LLM flows and agents for solving small daily problems. Flow can be selected by starting consul with the '--flow' '-f' flag, available flows are: {', '.join(flows)}. During runtime, following commands can be used. {Commands.get_instructions()}."  # noqa: E501
+        console.print(cls.apply_smart_text_wrap(intro_message), style=cls._main_col)
+        console.print("-" * console_width, style=cls._main_col)
 
     @classmethod
     def echo_goodbye(cls) -> None:
         """Display goodbye message."""
-        click.echo(click.style("\n\nSigning off! Bye ツ!", fg=cls._main_col))
-        click.echo(
-            click.style(
-                "Consul code available at https://github.com/ofinke/consul under MIT licence.", fg=cls._main_col
-            )
+        console = cls._init_console()
+        console_width = console.size.width
+
+        console.print("\n\nSigning off! Bye ツ!", style=cls._main_col)
+        console.print(
+            "Consul code available at https://github.com/ofinke/consul under MIT licence.", style=cls._main_col
         )
-        click.echo(click.style("-" * cls._max_width, fg=cls._main_col))
+        console.print("-" * console_width, style=cls._main_col)

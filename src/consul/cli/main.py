@@ -38,7 +38,7 @@ class ConsulInterface:
             level = "INFO"
 
         logger.remove()
-        logger.add(TerminalHandler.echo_loguru_message, level=level, format="{message}")
+        logger.add(TerminalHandler.display_loguru_message, level=level, format="{message}")
 
         # setup variables
         self._user_args = user_args
@@ -75,9 +75,10 @@ class ConsulInterface:
             # Get user input
             try:
                 if not self._user_args.message:
-                    user_input = click.prompt(click.style("\nUser", fg="blue"), type=str, prompt_suffix=": ")
+                    # user_input = click.prompt(click.style("\nUser", fg="blue"), type=str, prompt_suffix=": ")
+                    user_input = TerminalHandler.prompt_user_input()
                 else:
-                    TerminalHandler.echo_message(f"User: {self._user_args.message}")
+                    TerminalHandler.display_message(f"User: {self._user_args.message}")
                     user_input = self._user_args.message
                     self._user_args.message = ""  # reset message to avoid infinite loop
             except click.Abort:
@@ -87,12 +88,12 @@ class ConsulInterface:
             # Check for command
             if user_input.lower().strip().startswith("/"):
                 system_reply = self._handle_user_command(user_input.lower().strip())
-                TerminalHandler.echo_message(f"Command: {system_reply}")
+                TerminalHandler.display_message(f"Command:{system_reply}")
                 continue
 
             # Skip empty inputs
             if not user_input.strip():
-                TerminalHandler.echo_message("Command: Please enter a message")
+                TerminalHandler.display_message("Command: Please enter a message")
                 continue
 
             # Run the flow
@@ -110,7 +111,7 @@ class ConsulInterface:
 
             # Display response
             TerminalHandler.stop_spinner()
-            TerminalHandler.echo_message(f"AI: {assistant_message.content}", format_markdown=True)
+            TerminalHandler.display_message(f"AI: {assistant_message.content}", format_markdown=True)
 
     def _init_llm_flow(self, flow: str) -> None:
         # Change the active flow
@@ -119,7 +120,7 @@ class ConsulInterface:
         # Inform the user
         if flow not in FLOWS:
             logger.warning(f"Flow '{flow}' not in available flows ({', '.join(FLOWS)}). Starting default flow.")
-        TerminalHandler.echo_message(
+        TerminalHandler.display_message(
             f"Starting '{self._active_flow.config.name}' flow, ver: {self._active_flow.config.version}, {click.style('Description', fg='magenta')}: {self._active_flow.config.description}"  # noqa: E501
         )
 

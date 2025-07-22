@@ -16,4 +16,3 @@
   - Future idea: it can trigger the tests and see the results and use them to modify existing tests.
 - Implement agent for explaining code (merge with docs)
 - Find if I can get the git diffs and use them to create a agent which will write git message, push to the repo and give me bullet point summary of the changes for my notes.
-- Migrate console outputs to Rich / Textual
