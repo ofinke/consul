@@ -8,6 +8,7 @@ from rich.live import Live
 from rich.markdown import Markdown
 from rich.spinner import Spinner
 from rich.text import Text
+from rich.traceback import Traceback
 
 from consul.cli.utils.commands import Commands
 
@@ -104,13 +105,23 @@ class TerminalHandler:
         and safely handling the spinner instance.
         """
 
-        def emit_message(record: dict[str, Any], formatted_text: Text) -> None:
-            """Echo log message with log level taken into account."""
+        def emit_message(record: dict, formatted_text: Text) -> None:
+            """Echo log message (and exception, if any) with log level taken into account."""
             console = cls._init_console()
-            if record["level"].name in ["ERROR", "CRITICAL"]:
-                console.print(formatted_text, stderr=True)
-            else:
-                console.print(formatted_text)
+            # Print the main log message
+            console.print(formatted_text)
+            # Print traceback if present
+            if record.get("exception"):
+                exc = record["exception"]
+                tb_renderable = Traceback.from_exception(
+                    exc.type,
+                    exc.value,
+                    exc.traceback,
+                    width=console.size.width,
+                    show_locals=False,
+                    max_frames=10 if cls._use_colors else None,
+                )
+                console.print(tb_renderable)
 
         def format_message(record: dict[str, Any]) -> Text:
             """Format log message according to its level."""

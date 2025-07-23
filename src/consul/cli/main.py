@@ -24,7 +24,7 @@ class CommandInterrupt(BaseException):
 
 class ConsulInterface:
     _active_flow: BaseFlow
-    _memory: list[BaseMessage]
+    _chat_history: list[BaseMessage]
     _commands: Commands
     _user_args: UserArgs
 
@@ -42,7 +42,7 @@ class ConsulInterface:
 
         # setup variables
         self._user_args = user_args
-        self._memory: list[BaseMessage] = []
+        self._chat_history: list[BaseMessage] = []
         self._commands: Commands = Commands()
 
     def start_interface(self) -> None:
@@ -100,13 +100,13 @@ class ConsulInterface:
 
             # prepare history and call the flow
             user_message = ChatMessage(role="user", content=user_input)
-            self._memory.append(user_message)
-            result = self._active_flow.execute({"messages": self._memory})
+            self._chat_history.append(user_message)
+            result = self._active_flow.execute({"messages": self._chat_history})
 
             # Process response
             assistant_message = result.messages[-1]
-            new_history_part = result.messages[len(self._memory) :]
-            self._memory.extend(new_history_part)
+            new_history_part = result.messages[len(self._chat_history) :]
+            self._chat_history.extend(new_history_part)
 
             # Display response
             TerminalHandler.stop_spinner()
@@ -132,16 +132,16 @@ class ConsulInterface:
             raise CommandInterrupt
         # clear chat history
         if order in self._commands.RESET:
-            self._memory = []
+            self._chat_history = []
             return "Memory cleared!"
         # change used flow
         if order in self._commands.FLOW:
             self._init_llm_flow(info)
-            self._memory = []
+            self._chat_history = []
             return f"Flow changed to {self._active_flow.config.name} and memory cleared."
         # save data to markdown
         if order in self._commands.SAVE:
-            path_to_saved_file = save_memory(self._memory)
+            path_to_saved_file = save_memory(self._chat_history)
             return f"Conversation history saved in {path_to_saved_file}"
         return "Unknown command!"
 
