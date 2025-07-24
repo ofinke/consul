@@ -2,6 +2,8 @@
 
 Consul is a set of simple CLI-based LLM Tools and Agents, primarily designed to assist with Python code development and automation tasks. The project is built on top of the `langgraph` framework and is distributed under the MIT license.
 
+![Logo](content/ascii_logo.png)
+
 ## Features
 
 - **CLI Interface**: Interact with Consul via a command-line interface for maximum flexibility.
