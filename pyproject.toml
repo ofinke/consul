@@ -18,6 +18,8 @@ dependencies = [
     "pytz>=2025.2",
     "rich>=14.0.0",
     "prompt-toolkit>=3.0.51",
+    "mcp>=1.12.1",
+    "langchain-mcp-adapters>=0.1.9",
 ]
 
 [project.scripts]

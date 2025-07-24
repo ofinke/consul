@@ -35,10 +35,10 @@ def _truncate_strings(obj: dict | list | str, max_length: str = 500) -> dict | l
 
 def _process_aimessage(turn: AIMessage, idx: int) -> str:
     """Convert content of AIMessage into a markdown string."""
-    out = [f"### {idx}) Assistant:\n\n→"]
+    out = [f"## {idx}) Assistant:\n\n"]
     # load message content
     if turn.content:
-        out.append(turn.content)
+        out.append(f"→ {turn.content}")
     # load tool calls
     if "tool_calls" in turn.additional_kwargs:
         truncated = _truncate_strings(turn.additional_kwargs["tool_calls"])
@@ -56,7 +56,7 @@ def _process_aimessage(turn: AIMessage, idx: int) -> str:
 
 def _process_toolmessage(turn: ToolMessage, idx: int) -> str:
     """Convert content of ToolMessage into a markdown string."""
-    out = [f"### {idx}) Tool response:\n\n"]
+    out = [f"## {idx}) Tool response:\n\n"]
     keys_order = ["name", "tool_call_id", "status", "content"]
     truncated = _truncate_strings(turn.model_dump(include=keys_order))
     # dump ordered dict
@@ -68,7 +68,7 @@ def _process_toolmessage(turn: ToolMessage, idx: int) -> str:
 
 def _process_chatmessage(turn: ChatMessage, idx: int) -> str:
     """Convert content of ChatMessage into a markdown string."""
-    out = [f"### {idx}) User:\n\n→ ", turn.content]
+    out = [f"## {idx}) User:\n\n→ ", turn.content]
     if hasattr(turn, "token_usage"):
         out.append(f"Tokens used: {turn.token_usage}")
     return "\n".join(out)
