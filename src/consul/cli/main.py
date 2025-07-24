@@ -23,12 +23,15 @@ class CommandInterrupt(BaseException):
 
 
 class ConsulInterface:
+    """Class representing flow of the consul cli interface."""
+
     _active_flow: BaseFlow
     _chat_history: list[BaseMessage]
     _commands: Commands
     _user_args: UserArgs
 
     def __init__(self, user_args: UserArgs) -> None:
+        """Setup console interface state."""
         # Determine log level
         if user_args.quiet:
             level = "WARNING"
@@ -141,8 +144,8 @@ class ConsulInterface:
             return f"Flow changed to {self._active_flow.config.name} and memory cleared."
         # save data to markdown
         if order in self._commands.SAVE:
-            path_to_saved_file = save_memory(self._chat_history)
-            return f"Conversation history saved in {path_to_saved_file}"
+            path_to_saved_file = save_memory(self._chat_history, self._active_flow.config.name)
+            return f"Conversation history saved at '{path_to_saved_file}'"
         return "Unknown command!"
 
 
