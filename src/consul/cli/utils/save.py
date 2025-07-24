@@ -29,32 +29,30 @@ def _save_to_file(path: str, content: str) -> str:
 
 
 def _process_aimessage(turn: AIMessage, idx: int) -> str:
-    out = [f"{idx}. **Assistant:**<br>→ "]
-    if getattr(turn, "content", None):
+    out = [f"**{idx}: Assistant:**<br>→ "]
+    if getattr(turn, "content", "Couldn't retrive content"):
         out.append(turn.content)
-    elif getattr(turn, "tool_call", None):
+    elif getattr(turn.additional_kwargs, "tool_calls", None):
         out.append("```json")
-        out.append(json.dumps(turn.tool_call, indent=2))
+        out.append(json.dumps(turn.additional_kwargs["tool_calls"], indent=2))
         out.append("```")
-    if hasattr(turn, "token_usage"):
-        out.append(f"Tokens used: {turn.token_usage}")
+    if hasattr(turn.usage_metadata, "token_usage"):
+        out.append(f"Input tokens: {turn.usage_metadata['input_tokens']}, Input tokens: {turn.usage_metadata['output_tokens']}")
     return "\n".join(out)
 
 
-def _process_toolmessage(turn: ToolMessage, idx: int, preview_chars: int = 500) -> str:
-    out = [f"{idx}. **Tool response:**<br>→"]
-    content = getattr(turn, "content", "")
-    if len(content) > preview_chars:
-        out.append(content[:preview_chars] + "\n... (truncated)")
-    else:
-        out.append(content)
-    if hasattr(turn, "token_usage"):
-        out.append(f"Tokens used: {turn.token_usage}")
-    return "\n".join(out)
+def _process_toolmessage(turn: ToolMessage, idx: int) -> str:
+     content = [
+         f"**{idx}: Tool call:**<br>→",
+         f"Tool name: {getattr(turn, 'name', 'Unknown')}",
+         f"Tool call id: {getattr(turn, 'tool_call_id', 'Unknown')}",
+         f"Tool call status: {getattr(turn, 'status', 'Unknown')}",
+     ]
+     return "\n".join(content)
 
 
 def _process_chatmessage(turn: ChatMessage, idx: int) -> str:
-    out = [f"{idx}. **User:**<br>→ ", turn.content]
+    out = [f"**{idx}: User:**<br>→ ", turn.content]
     if hasattr(turn, "token_usage"):
         out.append(f"Tokens used: {turn.token_usage}")
     return "\n".join(out)
@@ -63,13 +61,13 @@ def _process_chatmessage(turn: ChatMessage, idx: int) -> str:
 def save_memory(memory: list[BaseMessage]) -> str:
     text_to_save: list[str] = []
 
-    for idx, turn in enumerate(memory, 1):
+    for idx, turn in enumerate(memory):
         if isinstance(turn, AIMessage):
-            text_to_save.append(_process_aimessage(turn, idx))
+            text_to_save.append(_process_aimessage(turn, idx+1))
         elif isinstance(turn, ToolMessage):
-            text_to_save.append(_process_toolmessage(turn, idx))
+            text_to_save.append(_process_toolmessage(turn, idx+1))
         elif isinstance(turn, ChatMessage):
-            text_to_save.append(_process_chatmessage(turn, idx))
+            text_to_save.append(_process_chatmessage(turn, idx+1))
 
     final_text = "\n\n".join(text_to_save)
     _save_to_file("history.md", final_text)
