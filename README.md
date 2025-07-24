@@ -1,8 +1,8 @@
+![Logo](content/ascii_logo.png)
+
 # Consul 🧑‍🔬
 
-Consul is a set of simple CLI-based LLM Tools and Agents, primarily designed to assist with Python code development and automation tasks. The project is built on top of the `langgraph` framework and is distributed under the MIT license.
-
-![Logo](content/ascii_logo.png)
+Consul 🧑‍🔬 is a terminal-based tool featuring a variety of LLM agents and workflows designed to assist with daily coding and other tasks.
 
 ## Features
 
