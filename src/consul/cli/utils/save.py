@@ -88,7 +88,7 @@ def save_memory(history: list[BaseMessage], flow_name: str) -> str:
             text_to_save.append(_process_chatmessage(turn, turn_id))
     # finalize and save
     final_text = "\n\n---\n\n".join(text_to_save)
-    timestamp = datetime.now().strftime("%d-%m-%Y-%H:%M:%S")  # noqa: DTZ005
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # noqa: DTZ005
     file_path = f"consul_{flow_name}_{timestamp}.md"
     _save_to_markdown(file_path, final_text)
     return file_path

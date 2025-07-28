@@ -13,7 +13,7 @@ from consul.flows.tasks.chat import ChatTask
 
 FLOWS = {
     "chat": ChatTask(AvailableFlow.CHAT),
-    "docs": ReactAgentFlow(AvailableFlow.DOCS),
+    "coder": ReactAgentFlow(AvailableFlow.CODER),
     "tester": ReactAgentFlow(AvailableFlow.TESTER),
 }
 
@@ -151,8 +151,15 @@ class ConsulInterface:
 
 @consul_user_args
 def main(user_args: UserArgs) -> None:
-    cli = ConsulInterface(user_args)
-    cli.start_interface()
+    while True:
+        cli = ConsulInterface(user_args)
+        try:
+            cli.start_interface()
+            break  # Exit if interface finishes normally
+        except click.ClickException:
+            restart = input("An error occurred. Restart interface? (y/n): ").strip().lower()
+            if restart != "y":
+                break
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ from consul.core.settings import get_project_root
 
 class AvailableFlow(Enum):
     CHAT = "chat"
-    DOCS = "docs"
+    CODER = "coder"
     TESTER = "tester"
 
 
@@ -54,7 +54,7 @@ class BaseAgentConfig(BaseFlowConfig):
 def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
     """Retrieve configuration for specific task."""
     config_mapping = {
-        AvailableFlow.DOCS: BaseAgentConfig,
+        AvailableFlow.CODER: BaseAgentConfig,
         AvailableFlow.TESTER: BaseAgentConfig,
     }
 
