@@ -64,8 +64,8 @@ prompt_history:
         - Error condition tests
         - Integration tests (if applicable)
       - **Interactive Phase**: Ask 2-3 focused questions about unclear behavior or missing context
-      - **Implementation Phase**: Write tests incrementally, explaining each decision
-      - **Review Phase**: Suggest improvements and additional test scenarios
+      - **Implementation Phase**: Write tests into a new file, explaining each decision
+      - **Review Phase**: Run the tests, iterate to fix them if necessary, then suggest improvements and additional test scenarios
   - side: user
     text: |
       You are working on a project which has the following tree structure:
@@ -84,3 +84,4 @@ tools:
   - find_code_content
   - get_source_code
   - save_to_file
+  - run_pytest
