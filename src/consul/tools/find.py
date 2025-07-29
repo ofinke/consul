@@ -1,17 +1,18 @@
 import ast
-import re
 from pathlib import Path
 from typing import Any
 
 from langchain_core.tools import tool
 
+from .utils import compile_search_pattern, find_python_files, parse_ast_from_content, read_file_lines
+
 
 @tool
-def find_patterns(
+def find_patterns(  # noqa: C901
     pattern_type: str,
-    search_term: str = None,
-    file_path: str = None,
-    include_usage: bool = True,
+    search_term: str | None = None,
+    file_path: str | None = None,
+    include_usage: bool = True,  # noqa: FBT001, FBT002
     project_root: str = ".",
 ) -> dict[str, Any]:
     """
@@ -53,7 +54,7 @@ def find_patterns(
     else:
         # Find all Python files in the project
         try:
-            files_to_search = [f for f in project_path.rglob("*.py") if f.is_file()]
+            files_to_search = find_python_files(str(project_path), "*.py")
         except (OSError, PermissionError) as e:
             return {
                 "error": f"Error accessing project directory: {e}",
@@ -74,15 +75,14 @@ def find_patterns(
             if not file_path_obj.is_file():
                 continue
 
-            with open(file_path_obj, "r", encoding="utf-8") as file:
-                content = file.read()
-                lines = content.splitlines()
+            lines = read_file_lines(str(file_path_obj))
+            content = "".join(lines)
 
             files_searched += 1
 
             # Parse the file with AST
             try:
-                tree = ast.parse(content)
+                tree = parse_ast_from_content(content)
                 file_matches = _analyze_ast(tree, str(file_path_obj), lines, pattern_type, search_term)
                 matches.extend(file_matches)
             except SyntaxError as e:
@@ -103,53 +103,67 @@ def find_patterns(
     }
 
 
-def _analyze_ast(
+def _analyze_ast(  # noqa: C901
     tree: ast.AST, file_path: str, lines: list[str], pattern_type: str, search_term: str = None
 ) -> list[dict]:
     """Analyze AST tree to find patterns."""
     matches = []
 
     class PatternVisitor(ast.NodeVisitor):
-        def visit_FunctionDef(self, node):
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            """Visit a function definition node and process it if it matches the pattern type."""
             if pattern_type in ["functions"]:
                 self._process_function(node)
             if pattern_type == "decorators" and node.decorator_list:
                 self._process_decorators(node)
             self.generic_visit(node)
 
-        def visit_AsyncFunctionDef(self, node):
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            """Visit an async function definition node and process it if it matches the pattern type."""
             if pattern_type in ["functions"]:
                 self._process_function(node, is_async=True)
             if pattern_type == "decorators" and node.decorator_list:
                 self._process_decorators(node)
             self.generic_visit(node)
 
-        def visit_ClassDef(self, node):
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            """Visit a class definition node and process it if it matches the pattern type."""
             if pattern_type == "classes":
                 self._process_class(node)
             self.generic_visit(node)
 
-        def visit_Import(self, node):
+        def visit_Import(self, node: ast.Import) -> None:
+            """Visit an import statement node and process it if it matches the pattern type."""
             if pattern_type == "imports":
                 self._process_import(node)
             self.generic_visit(node)
 
-        def visit_ImportFrom(self, node):
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+            """Visit an import-from statement node and process it if it matches the pattern type."""
             if pattern_type == "imports":
                 self._process_import_from(node)
             self.generic_visit(node)
 
-        def visit_Call(self, node):
+        def visit_Call(self, node: ast.Call) -> None:
+            """Visit a function call node and process it if it matches the pattern type."""
             if pattern_type == "calls":
                 self._process_call(node)
             self.generic_visit(node)
 
-        def visit_Assign(self, node):
-            if pattern_type == "variables":
-                self._process_assignment(node)
+        def visit_Assign(self, node: ast.Assign) -> None:
+            """Visit an assignment node and process it if it matches the pattern type."""
+            self._process_assignment(node)
             self.generic_visit(node)
 
-        def _process_function(self, node, is_async=False):
+        def _process_function(self, node: ast.FunctionDef, is_async: bool = False) -> None:
+            """
+            Process a function or async function node and add it to matches if it matches the search term.
+
+            Args:
+                node: The function definition AST node.
+                is_async: Whether the function is asynchronous.
+
+            """
             if search_term and search_term != node.name:
                 return
 
@@ -174,7 +188,14 @@ def _analyze_ast(
                 }
             )
 
-        def _process_class(self, node):
+        def _process_class(self, node: ast.ClassDef) -> None:
+            """
+            Process a class definition node and add it to matches if it matches the search term.
+
+            Args:
+                node: The class definition AST node.
+
+            """
             if search_term and search_term != node.name:
                 return
 
@@ -202,7 +223,14 @@ def _analyze_ast(
                 }
             )
 
-        def _process_import(self, node):
+        def _process_import(self, node: ast.Import) -> None:
+            """
+            Process an import statement node and add it to matches if it matches the search term.
+
+            Args:
+                node: The import AST node.
+
+            """
             for alias in node.names:
                 name = alias.asname if alias.asname else alias.name
                 if search_term and search_term != name:
@@ -220,7 +248,14 @@ def _analyze_ast(
                     }
                 )
 
-        def _process_import_from(self, node):
+        def _process_import_from(self, node: ast.ImportFrom) -> None:
+            """
+            Process an import-from statement node and add it to matches if it matches the search term.
+
+            Args:
+                node: The import-from AST node.
+
+            """
             module = node.module or ""
             for alias in node.names:
                 name = alias.asname if alias.asname else alias.name
@@ -240,7 +275,14 @@ def _analyze_ast(
                     }
                 )
 
-        def _process_call(self, node):
+        def _process_call(self, node: ast.Call) -> None:
+            """
+            Process a function call node and add it to matches if it matches the search term.
+
+            Args:
+                node: The function call AST node.
+
+            """
             # Extract function name from call
             func_name = None
             if isinstance(node.func, ast.Name):
@@ -265,7 +307,14 @@ def _analyze_ast(
                 }
             )
 
-        def _process_assignment(self, node):
+        def _process_assignment(self, node: ast.Assign) -> None:
+            """
+            Process an assignment node and add it to matches if it matches the search term.
+
+            Args:
+                node: The assignment AST node.
+
+            """
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     var_name = target.id
@@ -286,7 +335,15 @@ def _analyze_ast(
                         }
                     )
 
-        def _process_decorators(self, node):
+        def _process_decorators(self, node: ast.FunctionDef) -> None:
+            """
+            Process decorators of a function or async function node and add them to matches if they match the search
+            term.
+
+            Args:
+                node: The function or async function AST node.
+
+            """
             for decorator in node.decorator_list:
                 dec_name = None
                 if isinstance(decorator, ast.Name):
@@ -327,43 +384,41 @@ def _get_line_context(lines: list[str], line_no: int, context_lines: int = 0) ->
     return "\n".join(lines[start:end])
 
 
+def _is_definition_line(match: dict, file_path: str, line_no: int) -> bool:
+    """Check if the given file path and line number correspond to the definition line of the match."""
+    return match["file"] == file_path and match["line"] == line_no
+
+
+def _process_line(line: str, line_no: int, file_path: str, name_patterns: dict, matches: list[dict]) -> None:
+    """Process a single line of code to find and record usage locations for matched names."""
+    for name, pattern in name_patterns.items():
+        if pattern.search(line):
+            for match in matches:
+                if match["name"] == name and not _is_definition_line(match, file_path, line_no):
+                    match["usage_locations"].append({"file": file_path, "line": line_no, "context": line.strip()})
+
+
 def _add_usage_locations(matches: list[dict], files_to_search: list, pattern_type: str) -> list[dict]:
     """Find where the identified patterns are used in the codebase."""
     if pattern_type in ["calls", "function_call"]:
         return matches  # Calls are already usage locations
 
-    # Create a map of names to find
     names_to_find = {match["name"] for match in matches}
+    # Pre-compile patterns for all names
+    name_patterns = {name: compile_search_pattern(name)[0] for name in names_to_find}
 
     for file_path_obj in files_to_search:
         try:
-            # Ensure we're working with a Path object
-            if isinstance(file_path_obj, str):
-                file_path_obj = Path(file_path_obj)
+            file_path_obj = Path(file_path_obj) if isinstance(file_path_obj, str) else file_path_obj  # noqa: PLW2901
 
-            # Skip if not a file
             if not file_path_obj.is_file():
                 continue
 
-            with open(file_path_obj, "r", encoding="utf-8") as file:
-                lines = file.readlines()
-
+            lines = read_file_lines(str(file_path_obj))
+            file_path_str = str(file_path_obj)
             for line_no, line in enumerate(lines, 1):
-                for name in names_to_find:
-                    # Simple regex to find usage (can be improved)
-                    if re.search(rf"\b{re.escape(name)}\b", line):
-                        # Add to all matches with this name
-                        for match in matches:
-                            if match["name"] == name:
-                                # Don't add the definition line as usage
-                                if match["file"] == str(file_path_obj) and match["line"] == line_no:
-                                    continue
-
-                                match["usage_locations"].append(
-                                    {"file": str(file_path_obj), "line": line_no, "context": line.strip()}
-                                )
-
-        except (OSError, UnicodeDecodeError, PermissionError) as e:
+                _process_line(line, line_no, file_path_str, name_patterns, matches)
+        except (OSError, UnicodeDecodeError, PermissionError):
             continue
 
     return matches

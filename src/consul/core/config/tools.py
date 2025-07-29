@@ -1,12 +1,11 @@
 from enum import Enum
 
 from consul.tools.code import find_code_content, get_source_code
-from consul.tools.files import load_file, save_to_file
+from consul.tools.files import save_to_file
 from consul.tools.find import find_patterns
 
 
 class AvailableTools(Enum):
-    LOAD_FILE = "load_file"
     SAVE_TO_FILE = "save_to_file"
     FIND_PATTERNS = "find_patterns"
     GET_SOURCE_CODE = "get_source_code"
@@ -14,11 +13,10 @@ class AvailableTools(Enum):
 
 
 TOOL_MAPPING = {
-    AvailableTools.LOAD_FILE: load_file,
     AvailableTools.SAVE_TO_FILE: save_to_file,
     AvailableTools.FIND_PATTERNS: find_patterns,
     AvailableTools.GET_SOURCE_CODE: get_source_code,
-    AvailableTools.FIND_CODE_CONTENT: find_code_content
+    AvailableTools.FIND_CODE_CONTENT: find_code_content,
 }
 
 

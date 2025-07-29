@@ -80,5 +80,7 @@ agent:
 
 # tools
 tools:
-  - load_file
+  - find_patterns
+  - find_code_content
+  - get_source_code
   - save_to_file

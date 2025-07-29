@@ -3,40 +3,6 @@ from pathlib import Path
 from langchain_core.tools import tool
 from loguru import logger
 
-CODE_BLOCK_MAPPING = {
-    "py": "python",
-    "js": "javascript",
-    "ts": "typescript",
-    "java": "java",
-    "cpp": "cpp",
-    "c": "c",
-    "md": "markdown",
-    "txt": "",
-    "json": "json",
-    "yaml": "yaml",
-    "yml": "yaml",
-    "sh": "bash",
-    "html": "html",
-    "css": "css",
-    "xml": "xml",
-}
-
-
-@tool
-def load_file(path: str) -> str:
-    """Returns file contents as a markdown code block."""
-    file_path = Path(path)
-    if not file_path.is_file():
-        msg = f"File not found: {path}"
-        logger.error(msg)
-        return msg
-
-    content = file_path.read_text(encoding="utf-8")
-
-    ext = file_path.suffix.lower().lstrip(".")
-    lang = CODE_BLOCK_MAPPING.get(ext, ext)
-    return f"```{lang}\n{content}\n```"
-
 
 @tool
 def save_to_file(path: str, content: str) -> str:
