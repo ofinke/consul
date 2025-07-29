@@ -171,9 +171,8 @@ def _analyze_ast(  # noqa: C901
             func_type = "async function" if is_async else "function"
 
             # Get function signature
-            args = []
-            for arg in node.args.args:
-                args.append(arg.arg)
+            args = [arg.arg for arg in node.args.args]
+
             signature = f"def {node.name}({', '.join(args)})"
 
             matches.append(
