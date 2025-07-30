@@ -149,4 +149,4 @@ def find_code_content(
             },
         }
     except Exception as e:
-        return {"error": f"Search failed: {e!s}", "results": [], "summary": {"total_found": 0, "query": query}}
+        return {"error": f"Search failed: {e!s}", "results": [], "summary": {"total_found": 0, "query": query,}}
