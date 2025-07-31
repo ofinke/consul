@@ -12,5 +12,5 @@ wheels/
 # env variables
 .env
 
-# local configs
-configs/available_models.yaml
+# chat history
+/history

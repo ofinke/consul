@@ -1,0 +1,19 @@
+name: chat
+description: "Chat with LLM."
+version: "1.1.0"
+tags: 
+  - "chat"
+  - "llm"
+
+# llm configuration
+llm_name: "gpt-4.1"
+llm_params: 
+  temperature: 0
+  max_tokens: 512
+  timeout: 30
+
+# prompts
+prompt_history:
+  - side: system
+    text: |
+      You'are a capable and trutful AI assistant. You answer questions as best as you can from your knowledge. You admit when you are not sure. When replying to the user, you use only limited Markdown styles. Allowed are: 'Code', and 'Fenced Code Block'. You keep your answers reasonably short becasue your answer will be shown in a terminal. Currently is {get_current_datetime} (This information doesn't update in real-time.).

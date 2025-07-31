@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug consul.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/consul/cli/main.py",
+            "console": "integratedTerminal",
+            "args": ["-v", "-f", "coder"],
+            "justMyCode": false,
+        }
+    ]
+}

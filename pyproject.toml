@@ -10,11 +10,20 @@ requires-python = ">=3.12"
 dependencies = [
     "langchain>=0.3.21",
     "langchain-ollama>=0.3.0",
+    "langchain-openai>=0.3.27",
     "langgraph>=0.3.18",
+    "loguru>=0.7.3",
+    "pydantic-settings>=2.10.1",
+    "click>=8.1.8",
+    "pytz>=2025.2",
+    "rich>=14.0.0",
+    "prompt-toolkit>=3.0.51",
+    "mcp>=1.12.1",
+    "langchain-mcp-adapters>=0.1.9",
 ]
 
 [project.scripts]
-critic = "consul.cli_tools.critic:main"
+consul = "consul.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -22,16 +31,13 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "pytest>=8.4.1",
     "ruff>=0.11.2",
-]
-cli = [
-    "click>=8.1.8",
-    "yaspin>=3.1.0",
 ]
 
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py312" # the python version to target
 src = ["."]
 show-fixes = true
