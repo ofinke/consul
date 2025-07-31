@@ -3,7 +3,7 @@ from collections.abc import Sequence
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, ChatMessage
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langgraph.graph import StateGraph
 from loguru import logger
 from pydantic import BaseModel
@@ -81,11 +81,26 @@ class BaseFlow(ABC):
 
     # Common interface
     def get_llm(self) -> BaseChatModel:
-        return AzureChatOpenAI(
-            model=self.config.llm_name,
-            **settings.azure.get_credentials(),
-            **self.config.llm_params.model_dump(),
-        )
+        # NOTE: make this better nad move it to utils. Add check on model
+        # first try litellm
+        if "litellm" in settings.model_fields_set:
+            logger.debug("Starting 'litellm' API connection.")
+            return ChatOpenAI(
+                model=self.config.llm_name,
+                **settings.litellm.get_credentials(),
+                **self.config.llm_params.model_dump(),
+            )
+        # then azure
+        if "azure" in settings.model_fields_set:
+            logger.debug("Starting 'azure' API connection.")
+            return AzureChatOpenAI(
+                model=self.config.llm_name,
+                **settings.azure.get_credentials(),
+                **self.config.llm_params.model_dump(),
+            )
+        msg = "No supported credentials, couldn't initialize LLM model."
+        logger.error(msg)
+        raise ValueError(msg)
 
     def prepare_to_run(self, input_data: dict[str, any]) -> BaseFlowInput:
         """

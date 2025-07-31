@@ -57,7 +57,7 @@ prompt_history:
       - You recommend mocking strategies for external dependencies
       
       ## Flow
-      - **Analysis Phase**: Look up and analyze mentioned code, identify dependencies and side effects
+      - **Analysis Phase**: Always try to look up code in the project. Analyze it and identify dependencies and side effects
       - **Planning Phase**: Create a test plan covering:
         - Core functionality tests
         - Boundary condition tests  

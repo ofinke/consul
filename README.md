@@ -2,21 +2,13 @@
 
 # Consul 🧑‍🔬
 
-Consul 🧑‍🔬 is a terminal-based tool featuring a variety of LLM agents and workflows designed to assist with daily coding and other tasks.
-
-## Features
-
-- **CLI Interface**: Interact with Consul via a command-line interface for maximum flexibility.
-- **LLM Flows and Agents**: Modular flows for chat, documentation, and code testing, powered by large language models.
-- **Extensible Tooling**: Easily add new tools (file operations, code analysis, etc.) for agent use.
-- **Configurable**: YAML-based configuration for flows, prompts, and tools.
-- **Project-Aware**: Can analyze and document Python projects, including class/function discovery and code relationships.
+Consul 🧑‍🔬 is a terminal-based tool featuring a variety of LLM agents and workflows designed to assist with daily coding or other tasks.
 
 ## Installation
 
 ### Environment Variables
 
-Copy `.env.example` to `.env` and fill in the required values for your environment (e.g., Azure/OpenAI credentials).
+Copy `.env.example` to `.env` and fill in the required values or export variables into your terminal.
 
 ### Local Installation
 
@@ -37,62 +29,34 @@ From the project root, install globally with:
 ```bash
 pip install -e .
 ```
-Or, to install in a separate venv:
-
-```bash
-pipx install -e .
-```
 
 Then invoke the CLI with:
 
 ```bash
 consul
 ```
+Installation using pipx doesn't work for now, TBD.
 
 ## Usage
 
-Start Consul and select a flow:
+Start Consul with default flow (chat):
 
 ```bash
-consul --flow chat
+consul
+```
+
+or with different flow
+
+```bash
+consul -f coder
 ```
 
 Available flows include:
-- `chat`: Ask LLM questions interactively.
-- `docs`: Generate documentation for your codebase.
-- `tester`: Run code testing flows.
+- `chat`: Basic chat interface.
+- `coder`: Design new features, understand complex codebases, and write documentation.
+- `tester`: Interactive agent aimed to create comprehensive tests and evaluate their functionality.
 
-During runtime, you can use various commands (see CLI help or code for details).
 
-## Project Structure
-
-- `src/consul/cli/`: CLI entrypoint, logging, and utilities.
-- `src/consul/flows/`: Core flows and agent/task definitions.
-- `src/consul/core/`: Configuration, settings, and environment management.
-- `src/consul/prompts/`: Prompt templates and project-aware prompt logic.
-- `src/consul/tools/`: Tool implementations (file operations, code analysis, etc.).
-- `configs/`: YAML configuration files for flows and tools.
-- `docs/`: Generated documentation.
-
-## Main Components
-
-- **BaseFlow**: Abstract base for all flows (tasks/agents).
-- **ChatTask**: Simple LLM chat flow.
-- **ReactAgentFlow**: Agent flow with tool support (ReAct pattern).
-- **Tools**: File operations, code pattern search, and more.
-- **CLI**: Main interface for user interaction.
-
-## Example: Adding a New Tool
-
-1. Implement your tool in `src/consul/tools/`.
-2. Register it in `src/consul/core/config/tools.py`.
-3. Add to the desired flow's config in `configs/`.
-
-## Extending Flows
-
-- Subclass `BaseFlow` or `ReactAgentFlow` in `src/consul/flows/`.
-- Define your input/output schemas and graph logic.
-- Register your flow in the CLI and config.
 
 ## License
 

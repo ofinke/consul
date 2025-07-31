@@ -8,7 +8,7 @@ from .utils import compile_search_pattern, find_python_files, parse_ast_from_con
 
 
 @tool
-def get_source_code(
+def get_source_code(  # noqa: C901
     target_type: str,
     name: str,
     file_path: str | None = None,
@@ -18,7 +18,7 @@ def get_source_code(
     """
     Retrieve complete source code for specific functions, classes, or methods.
 
-    Args:
+    Input:
         target_type: 'function', 'class', 'method', or 'file'
         name: Exact name of function/class to retrieve
         file_path: Specific file to look in (optional)
@@ -119,7 +119,7 @@ def find_code_content(
         results = []
         for file_path in files:
             try:
-                lines = -read_file_lines(str(file_path))
+                lines = read_file_lines(str(file_path))
                 for i, line in enumerate(lines):
                     if pattern.search(line):
                         start = max(0, i - context_lines)
@@ -148,5 +148,12 @@ def find_code_content(
                 "truncated": len(results) == max_results,
             },
         }
-    except Exception as e:
-        return {"error": f"Search failed: {e!s}", "results": [], "summary": {"total_found": 0, "query": query,}}
+    except Exception as e:  # noqa: BLE001
+        return {
+            "error": f"Search failed: {e!s}",
+            "results": [],
+            "summary": {
+                "total_found": 0,
+                "query": query,
+            },
+        }
