@@ -163,14 +163,17 @@ class TerminalHandler:
             emit_message(record, formatted_text)
 
     @classmethod
-    def prompt_user_input(cls) -> str:
+    def prompt_user_input(cls, show_prompt: str = "→ ") -> str:
         """Get user input with persistent prompt and proper wrapping."""
         console = cls._init_console()
+        spinner_was_running = cls._live_spinner and cls._live_spinner.is_started
+        if spinner_was_running:
+            cls.stop_spinner()
         try:
             console.print("\n", end="")
             console.print(Text("User:", style="blue"))
             user_input = prompt(
-                "→ ",  # Simple string prompt
+                show_prompt,
                 # mouse_support=True,
                 wrap_lines=True,
                 enable_history_search=True,
@@ -180,8 +183,11 @@ class TerminalHandler:
             raise
         except EOFError as e:
             raise KeyboardInterrupt from e
-
-        return user_input
+        else:
+            return user_input
+        finally:
+            if spinner_was_running:
+                cls.start_spinner()
 
     @classmethod
     def display_message(cls, message: str, *, format_markdown: bool = False) -> None:

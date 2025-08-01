@@ -1,5 +1,4 @@
 import ast
-import os
 import shutil
 import subprocess
 import tempfile
@@ -7,6 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.tools import tool
+from loguru import logger
+
+from consul.cli.utils.text import TerminalHandler
 
 from .utils import compile_search_pattern, find_python_files, parse_ast_from_content, read_file_lines
 
@@ -162,88 +164,90 @@ def find_code_content(
             },
         }
 
+
 # NOTE: This works enough. Time to polish it. I want to return dict instead of bool. Move prints to logger or remove them
 # create hack implementation of user input using the CLI TerminalHandler
 @tool
-def propose_code_change(file_path: str, proposed_code: str) -> bool:
+def propose_code_changes(file_path: str, proposed_code: str) -> dict[str, Any]:
     """
-    Propose a code change by showing a VSCode diff and asking for user approval.
+    Propose a code change or create a new file. Code change is proposed via 'code --diff'. Create the 'proposed_code'
+    accordingly.
 
     Args:
-        file_path (str): Relative path to the file to be changed.
+        file_path (str): Relative path to existing or new file.
         proposed_code (str): Proposed new code as a string.
 
     Returns:
-        bool: True if the change was accepted and applied, False otherwise.
+        dict[str, Any]: dictionary describing state of the code change
 
     """
-    # resolve path to existing file
-    abs_path = Path(file_path).resolve()
+    # resolve path to existing / new file
+    original_file = Path(file_path).resolve()
 
-    # split 
+    # split code into lines
     proposed_lines = proposed_code.splitlines(keepends=True)
 
+    # create temporary file with new code in projects ".temp" folder
     tmp_dir = Path.cwd() / ".temp"
     tmp_dir.mkdir(exist_ok=True)
 
     with tempfile.NamedTemporaryFile("w", delete=False, suffix=".py", dir=tmp_dir) as tmp:
         tmp.writelines(proposed_lines)
-        tmp_path = Path(tmp.name)
+        proposed_file = Path(tmp.name)
+
+    # if the `file_path` file doesn't exist, create an empty temp file for diff
+    is_new_file = not original_file.exists()
+    if is_new_file:
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".py", dir=tmp_dir) as empty_tmp:
+            empty_tmp_path = Path(empty_tmp.name)
+    else:
+        empty_tmp_path = original_file
 
     try:
         # Find the code command
         code_cmd = shutil.which("code")
-        if not code_cmd:
-            # Try common locations
-            possible_paths = [
-                "/usr/local/bin/code",
-                "C:\\Users\\{}\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd".format(
-                    os.getenv("USERNAME", "")
-                ),
-            ]
-            for path in possible_paths:
-                if Path(path).exists():
-                    code_cmd = path
-                    break
 
         if not code_cmd:
-            raise FileNotFoundError("VSCode command not found")
+            msg = "VSCode command 'code' not found"
+            logger.warning(msg)
+            return {"status": "failed", "message": msg}
 
-        print(f"Using VSCode at: {code_cmd}")
-
+        # TODO: can I mitigate the S603 rule somehow reasonably?
         result = subprocess.run(
-            [code_cmd, "--diff", str(abs_path), str(tmp_path)], check=False, capture_output=True, text=True
+            [code_cmd, "--diff", str(empty_tmp_path), str(proposed_file)], check=False, capture_output=True, text=True
         )
 
         if result.returncode != 0:
-            print(f"VSCode command failed: {result.stderr}")
-            raise subprocess.CalledProcessError(result.returncode, code_cmd)
+            msg = f"VSCode command failed: {result.stderr}"
+            logger.warning(msg)
+            return {"status": "failed", "message": msg}
 
-        print("Diff opened in VSCode. Please review the changes.")
-
-        choice = input("Accept the proposed change? [y/N]: ").strip().lower()
+        # HACK, FIXME: The usage of TerminalHandler is hacky here as I would like to keep interface and agents
+        # implementation as separate as possible. This is hopefuly shortterm solution before I implement the asyncio
+        # event / consumer approach. So hopefully I'll manage lol.
+        choice = TerminalHandler.prompt_user_input("→ Accept the proposed change? [y/N]: ")
         accepted = choice == "y"
 
-        if accepted:
-            abs_path.parent.mkdir(parents=True, exist_ok=True)
-            abs_path.write_text("".join(proposed_lines), encoding="utf-8")
-            print(f"✓ Changes applied to {abs_path}")
-        else:
-            print("✗ Changes rejected.")
+        # ask user why the changes were rejected
+        if not accepted:
+            reason = TerminalHandler.prompt_user_input("→ Comment why changes were rejected: ")
+            msg = f"Changes rejected wit note from the user: '{reason}'."
+            return {"status": "failed", "message": msg}
 
-    except (FileNotFoundError, subprocess.CalledProcessError) as e:
-        print(f"Could not open VSCode diff: {e}")
-        print("Showing text diff instead:")
+        # save the changes
+        original_file.parent.mkdir(parents=True, exist_ok=True)
+        original_file.write_text("".join(proposed_lines), encoding="utf-8")
 
-        choice = input("Accept the proposed change? [y/N]: ").strip().lower()
-        accepted = choice == "y"
+    except Exception as e:  # noqa: BLE001
+        msg = f"Exception raised during the propose_code_change tool run: {e!s}"
+        logger.warning(msg)
+        return {"status": "failed", "message": msg}
 
-        if accepted:
-            abs_path.parent.mkdir(parents=True, exist_ok=True)
-            abs_path.write_text("".join(proposed_lines), encoding="utf-8")
-            print(f"✓ Changes applied to {abs_path}")
+    else:
+        msg = f"Changes accepted by user and applied to {original_file}"
+        return {"status": "success", "message": msg}
 
     finally:
-        tmp_path.unlink(missing_ok=True)
-
-    return accepted
+        proposed_file.unlink(missing_ok=True)
+        if is_new_file and empty_tmp_path.exists():
+            empty_tmp_path.unlink(missing_ok=True)

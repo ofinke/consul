@@ -1,6 +1,6 @@
 from enum import Enum
 
-from consul.tools.code import find_code_content, get_source_code, propose_code_change
+from consul.tools.code import find_code_content, get_source_code, propose_code_changes
 from consul.tools.files import save_to_file
 from consul.tools.find import find_patterns
 from consul.tools.tests import run_pytest
@@ -21,7 +21,7 @@ TOOL_MAPPING = {
     AvailableTools.GET_SOURCE_CODE: get_source_code,
     AvailableTools.FIND_CODE_CONTENT: find_code_content,
     AvailableTools.RUN_PYTEST: run_pytest,
-    AvailableTools.PROPOSE_CODE_CHANGE: propose_code_change
+    AvailableTools.PROPOSE_CODE_CHANGE: propose_code_changes
 }
 
 
