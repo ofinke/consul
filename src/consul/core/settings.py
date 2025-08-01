@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from pydantic import BaseModel, Field, SecretStr
+from loguru import logger
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +39,14 @@ class Settings(BaseSettings):
     # LLM credentials
     azure: AzureCredentials | None = None
     litellm: GeneralCredentials | None = None
+
+    @model_validator(mode="after")
+    def check_llm_credentials(self) -> "Settings":
+        if self.azure is None and self.litellm is None:
+            msg = "At least one LLM credential (azure or litellm) must be provided."
+            logger.error(msg)
+            raise ValueError(msg)
+        return self
 
 
 settings = Settings()

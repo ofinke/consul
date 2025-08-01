@@ -6,7 +6,10 @@ from loguru import logger
 
 @tool
 def save_to_file(path: str, content: str) -> str:
-    """Saves the content to a new file, creating directories if needed. Allowed suffixes: .md, .py."""
+    """
+    Saves the content to a new file, creating directories if needed. Cannot overwrite already existing files.
+    Allowed suffixes: .md, .py.
+    """
     # setup
     allowed_suffixes = [".md", ".py"]
     file_path = Path(path)

@@ -54,7 +54,7 @@ def find_patterns(  # noqa: C901
     else:
         # Find all Python files in the project
         try:
-            files_to_search = find_python_files(str(project_path), "*.py")
+            files_to_search = find_python_files(str(project_path), "**/*.py")
         except (OSError, PermissionError) as e:
             return {
                 "error": f"Error accessing project directory: {e}",

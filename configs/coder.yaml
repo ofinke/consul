@@ -108,12 +108,6 @@ prompt_history:
       3. **Observation**: Analyze the results from your tools
       4. **Repeat**: Continue Thought→Action→Observation until you have enough info
       5. **Response**: Provide your final answer based on observations
-
-      # Project Structure
-      You are working on a project with the following structure:
-      '''
-      {get_project_tree}
-      '''
     
       # Answer formatting
       - When replying to the user, you use only limited Markdown styles:
