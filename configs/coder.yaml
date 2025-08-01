@@ -132,3 +132,4 @@ tools:
   - find_code_content
   - get_source_code
   - save_to_file
+  - propose_code_change

@@ -1,4 +1,8 @@
 import ast
+import os
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -157,3 +161,89 @@ def find_code_content(
                 "query": query,
             },
         }
+
+# NOTE: This works enough. Time to polish it. I want to return dict instead of bool. Move prints to logger or remove them
+# create hack implementation of user input using the CLI TerminalHandler
+@tool
+def propose_code_change(file_path: str, proposed_code: str) -> bool:
+    """
+    Propose a code change by showing a VSCode diff and asking for user approval.
+
+    Args:
+        file_path (str): Relative path to the file to be changed.
+        proposed_code (str): Proposed new code as a string.
+
+    Returns:
+        bool: True if the change was accepted and applied, False otherwise.
+
+    """
+    # resolve path to existing file
+    abs_path = Path(file_path).resolve()
+
+    # split 
+    proposed_lines = proposed_code.splitlines(keepends=True)
+
+    tmp_dir = Path.cwd() / ".temp"
+    tmp_dir.mkdir(exist_ok=True)
+
+    with tempfile.NamedTemporaryFile("w", delete=False, suffix=".py", dir=tmp_dir) as tmp:
+        tmp.writelines(proposed_lines)
+        tmp_path = Path(tmp.name)
+
+    try:
+        # Find the code command
+        code_cmd = shutil.which("code")
+        if not code_cmd:
+            # Try common locations
+            possible_paths = [
+                "/usr/local/bin/code",
+                "C:\\Users\\{}\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd".format(
+                    os.getenv("USERNAME", "")
+                ),
+            ]
+            for path in possible_paths:
+                if Path(path).exists():
+                    code_cmd = path
+                    break
+
+        if not code_cmd:
+            raise FileNotFoundError("VSCode command not found")
+
+        print(f"Using VSCode at: {code_cmd}")
+
+        result = subprocess.run(
+            [code_cmd, "--diff", str(abs_path), str(tmp_path)], check=False, capture_output=True, text=True
+        )
+
+        if result.returncode != 0:
+            print(f"VSCode command failed: {result.stderr}")
+            raise subprocess.CalledProcessError(result.returncode, code_cmd)
+
+        print("Diff opened in VSCode. Please review the changes.")
+
+        choice = input("Accept the proposed change? [y/N]: ").strip().lower()
+        accepted = choice == "y"
+
+        if accepted:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            abs_path.write_text("".join(proposed_lines), encoding="utf-8")
+            print(f"✓ Changes applied to {abs_path}")
+        else:
+            print("✗ Changes rejected.")
+
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        print(f"Could not open VSCode diff: {e}")
+        print("Showing text diff instead:")
+
+        choice = input("Accept the proposed change? [y/N]: ").strip().lower()
+        accepted = choice == "y"
+
+        if accepted:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            abs_path.write_text("".join(proposed_lines), encoding="utf-8")
+            print(f"✓ Changes applied to {abs_path}")
+
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    return accepted
