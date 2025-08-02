@@ -165,8 +165,6 @@ def find_code_content(
         }
 
 
-# NOTE: This works enough. Time to polish it. I want to return dict instead of bool. Move prints to logger or remove them
-# create hack implementation of user input using the CLI TerminalHandler
 @tool
 def propose_code_changes(file_path: str, proposed_code: str) -> dict[str, Any]:
     """
