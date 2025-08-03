@@ -113,11 +113,10 @@ prompt_history:
       - Use all available tools at your disposal to succesfully accomplish your task
       - Use "find_patterns", "find_code_content", and "get_source_code" to correctly navigate in the project
       - You can use "save_to_file" tool for documentation or files not specific to the code
-      - You propose code changes or create new code files with "propose_code_change" tool. Use this tool with following rules:
-        - The tool uses visual studio code --diff functionality to compare original code to your newly generated code
-        - VERY strictly adhere to already created code structure.
-        - Keep or enhance existing typehints, and docstrings.
-        - Always generate full file as it is required for the --diff to work correctly.
+      - You can propose completely new files with code using "propose_new_code"
+      - When proposing new or patching existing code, strictly adhere to following rules:
+        - VERY strictly follow created code structure.
+        - Keep or enhance existing typehints, and docstrings. Never remove them
 
       # Answer formatting
       - When replying to the user, you use only limited Markdown styles:
@@ -142,4 +141,4 @@ tools:
   - find_code_content
   - get_source_code
   - save_to_file
-  - propose_code_change
+  - propose_new_code

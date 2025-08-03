@@ -1,6 +1,7 @@
 from enum import Enum
 
-from consul.tools.code import find_code_content, get_source_code, propose_code_changes
+from consul.tools.code import find_code_content, get_source_code
+from consul.tools.code_proposals import propose_code_patch, propose_new_code
 from consul.tools.files import save_to_file
 from consul.tools.find import find_patterns
 from consul.tools.tests import run_pytest
@@ -12,7 +13,8 @@ class AvailableTools(Enum):
     GET_SOURCE_CODE = "get_source_code"
     FIND_CODE_CONTENT = "find_code_content"
     RUN_PYTEST = "run_pytest"
-    PROPOSE_CODE_CHANGE = "propose_code_change"
+    PROPOSE_CODE_PATCH = "propose_code_patch"
+    PROPOSE_NEW_CODE = "propose_new_code"
 
 
 TOOL_MAPPING = {
@@ -21,9 +23,9 @@ TOOL_MAPPING = {
     AvailableTools.GET_SOURCE_CODE: get_source_code,
     AvailableTools.FIND_CODE_CONTENT: find_code_content,
     AvailableTools.RUN_PYTEST: run_pytest,
-    AvailableTools.PROPOSE_CODE_CHANGE: propose_code_changes
+    AvailableTools.PROPOSE_CODE_PATCH: propose_code_patch,
+    AvailableTools.PROPOSE_NEW_CODE: propose_new_code,
 }
-
 
 # NOTE: small prep for MCP tools, issue is, that the StructuredTool from langchain doesn't support sync operations,
 # so refactoring to asyncio is required for the graphs integration.
