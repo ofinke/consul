@@ -6,7 +6,7 @@ All tests use the public .invoke() interface except one direct call test.
 
 from pathlib import Path
 
-from consul.tools.code import get_source_code
+from consul.tools.retrieve_code import get_source_code
 
 
 # Helper to write a file

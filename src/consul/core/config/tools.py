@@ -1,9 +1,9 @@
 from enum import Enum
 
-from consul.tools.code import find_code_content, get_source_code
-from consul.tools.code_proposals import propose_code_patch, propose_new_code
 from consul.tools.files import save_to_file
 from consul.tools.find import find_patterns
+from consul.tools.propose_code import propose_code_patch, propose_new_code
+from consul.tools.retrieve_code import find_code_content, get_source_code
 from consul.tools.tests import run_pytest
 
 

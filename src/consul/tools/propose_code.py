@@ -1,4 +1,5 @@
 import io
+import re
 import shutil
 import subprocess
 import tempfile
@@ -42,32 +43,115 @@ def _get_user_approval() -> tuple[bool, str]:
     reason = TerminalHandler.prompt_user_input("→ Comment why changes were rejected: ")
     return False, reason
 
-# TODO: Evaluate functionality of this function by tests and also include function which evaluates validity of the 
-# patch string
+
+def _evaluate_patch_hunk(patch: str) -> str:
+    """
+    Checks and repairs all hunks in a unified diff patch if the hunk header doesn't match the actual number of lines
+    in the hunk body. Returns the (possibly fixed) patch as a string.
+    """
+    if not any(line.startswith("--- ") for line in patch.splitlines()):
+        patch = "--- a/file.txt\n+++ b/file.txt\n" + patch
+
+    hunk_header_re = re.compile(
+        r"^@@ "
+        r"-([1-9]\d*)(?:,([1-9]\d*))?\s"  # group(1): old_start, group(2): old_count (optional)
+        r"\+([1-9]\d*)(?:,([1-9]\d*))?"  # group(3): new_start, group(4): new_count (optional)
+        r" @@(.*)$"  # group(5): optional section
+    )
+
+    lines = patch.splitlines()
+    out_lines = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        m = hunk_header_re.match(line)
+        if m:
+            # Save hunk header and body for now
+            hunk_header = line
+            hunk_body = []
+            i += 1
+            while i < len(lines) and not lines[i].startswith("@@"):
+                hunk_body.append(lines[i])
+                i += 1
+
+            # Count old and new lines in hunk body
+            old_lines = 0
+            new_lines = 0
+            for line in hunk_body:
+                if line.startswith((" ", "-")):
+                    old_lines += 1
+                if line.startswith((" ", "+")):
+                    new_lines += 1
+
+            # Prepare fixed counts
+            old_start = int(m.group(1))
+            old_count = int(m.group(2)) if m.group(2) else 1
+            new_start = int(m.group(3))
+            new_count = int(m.group(4)) if m.group(4) else 1
+            section = m.group(5) or ""
+
+            # Only fix if mismatched
+            if old_count != old_lines or new_count != new_lines:
+                fixed_header = f"@@ -{old_start},{old_lines} +{new_start},{new_lines} @@{section}"
+                out_lines.append(fixed_header)
+            else:
+                out_lines.append(hunk_header)
+            out_lines.extend(hunk_body)
+        else:
+            out_lines.append(line)
+            i += 1
+
+    return "\n".join(out_lines)
+
+
 def _apply_patch(original_content: str, patch: str) -> str:
-    # PatchSet expects file headers (---, +++) to find the file!
+    # Safety: PatchSet expects file headers (---, +++) to find the file!
     if not any(line.startswith("--- ") for line in patch.splitlines()):
         msg = "Patch must include file headers (---, +++ lines)."
         raise ValueError(msg)
 
+    # Split the content keeping line endings so hunk.linenos match
+    original_lines = original_content.splitlines(keepends=True)
     patchset = PatchSet(io.StringIO(patch))
-    # Get only patch for the file (simplest for 1-file patches)
-    patched_lines = original_content.splitlines(keepends=True)
-    for patched_file in patchset:
-        # Only do the first file, as before
-        patched_lines = patched_file.apply_to(patched_lines)
-        break
+    patched_file = patchset[0]
+
+    # Apply all hunks to `original_lines` in order
+    patched_lines = []
+    idx = 0  # position in original_lines
+
+    for hunk in patched_file:
+        # Write unchanged lines before hunk
+        while idx < hunk.source_start - 1:
+            patched_lines.append(original_lines[idx])
+            idx += 1
+        # Now, apply hunk
+        for hunk_line in hunk:
+            if hunk_line.is_context:
+                # Unchanged line: copy from original
+                patched_lines.append(original_lines[idx])
+                idx += 1
+            elif hunk_line.is_removed:
+                # Line removed: skip in original
+                idx += 1
+            elif hunk_line.is_added:
+                # Line added: add from patch
+                patched_lines.append(hunk_line.value)
+            # Note: No else: unknown line types
+    # After the last hunk, add remaining lines
+    patched_lines.extend(original_lines[idx:])
+
     return "".join(patched_lines)
 
 
 @tool
 def propose_code_patch(file_path: str, patch: str) -> dict[str, str]:
     """
-    Apply a patch to an existing file using unified diff format.
+    Apply a patch to an existing file using unified diff format with a valid hunk header.
 
     Args:
         file_path (str): Path to existing file to modify
-        patch (str): Unified diff patch content including valid file and hunk headers
+        patch (str): Unified diff patch content. The patch needs to contain valid file hunk header with following format
+            "@@ -1,6 +1,7 @@"
 
     Returns:
         dict[str, str]: Status of the patch operation
@@ -86,7 +170,7 @@ def propose_code_patch(file_path: str, patch: str) -> dict[str, str]:
     try:
         # Read original content and apply patch
         original_content = original_file.read_text(encoding="utf-8")
-        modified_content = _apply_patch(original_content, patch)
+        modified_content = _apply_patch(original_content, _evaluate_patch_hunk(patch))
 
         # Create temporary file with modified content
         tmp_dir = _ensure_temp_dir()

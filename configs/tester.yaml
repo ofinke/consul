@@ -66,6 +66,18 @@ prompt_history:
       - **Interactive Phase**: Ask 2-3 focused questions about unclear behavior or missing context
       - **Implementation Phase**: Write tests into a new file, explaining each decision
       - **Review Phase**: Run the tests, iterate to fix them if necessary, then suggest improvements and additional test scenarios
+
+      ## Tool usage
+      - Use all available tools at your disposal to succesfully accomplish your task
+      - Use "find_patterns", "find_code_content", and "get_source_code" to correctly navigate in the project
+      - You can propose completely new files with code using "propose_new_code"
+      - You can propose code changes into a single file using "propose_code_patch" tool using unified diff format
+        - The patch string has to include correct Hunk header. Example format: "@@ -1,6 +1,7 @@"
+      - When proposing new or patching existing code, strictly adhere to following rules:
+        - VERY strictly follow created code structure.
+        - Keep or enhance existing typehints, and docstrings. Never remove them
+      - You can run python tests using pytest with "run_pytest" tool
+
   - side: user
     text: |
       You are working on a project which has the following tree structure:
@@ -83,5 +95,6 @@ tools:
   - find_patterns
   - find_code_content
   - get_source_code
-  - save_to_file
+  - propose_new_code
+  - propose_code_patch
   - run_pytest
