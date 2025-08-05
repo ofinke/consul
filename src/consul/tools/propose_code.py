@@ -147,7 +147,7 @@ def _apply_patch(original_content: str, patch: str) -> str:
 
 
 @tool
-def propose_code_patch(file_path: str, patch: str) -> dict[str, str]:
+def propose_code_edit(file_path: str, patch: str) -> dict[str, str]:
     """
     Apply a patch to an existing file using unified diff format with a valid hunk header.
 
