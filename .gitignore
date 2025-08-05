@@ -14,3 +14,9 @@ wheels/
 
 # chat history
 /history
+
+# temp folders
+/.temp
+/.tmp
+/tmp
+/temp
