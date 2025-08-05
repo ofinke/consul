@@ -44,7 +44,7 @@ def _get_user_approval() -> tuple[bool, str]:
     return False, reason
 
 
-def _evaluate_patch_hunk(patch: str) -> str:
+def _eval_patch_hunk(patch: str) -> str:
     """
     Checks and repairs all hunks in a unified diff patch if the hunk header doesn't match the actual number of lines
     in the hunk body. Returns the (possibly fixed) patch as a string.
@@ -70,26 +70,24 @@ def _evaluate_patch_hunk(patch: str) -> str:
             hunk_header = line
             hunk_body = []
             i += 1
-            while i < len(lines) and not lines[i].startswith("@@"):
+            # Stop at the next hunk header or end of patch
+            while i < len(lines) and not hunk_header_re.match(lines[i]):
                 hunk_body.append(lines[i])
                 i += 1
-
             # Count old and new lines in hunk body
             old_lines = 0
             new_lines = 0
-            for line in hunk_body:
-                if line.startswith((" ", "-")):
+            for body_line in hunk_body:
+                if body_line.startswith((" ", "-")):
                     old_lines += 1
-                if line.startswith((" ", "+")):
+                if body_line.startswith((" ", "+")):
                     new_lines += 1
-
             # Prepare fixed counts
             old_start = int(m.group(1))
             old_count = int(m.group(2)) if m.group(2) else 1
             new_start = int(m.group(3))
             new_count = int(m.group(4)) if m.group(4) else 1
             section = m.group(5) or ""
-
             # Only fix if mismatched
             if old_count != old_lines or new_count != new_lines:
                 fixed_header = f"@@ -{old_start},{old_lines} +{new_start},{new_lines} @@{section}"
@@ -97,11 +95,16 @@ def _evaluate_patch_hunk(patch: str) -> str:
             else:
                 out_lines.append(hunk_header)
             out_lines.extend(hunk_body)
+
         else:
             out_lines.append(line)
-            i += 1
+            i += 1  # Only increment when we're not processing a hunk
 
-    return "\n".join(out_lines)
+    # ensure trailing newline
+    patch_str = "\n".join(out_lines)
+    if not patch_str.endswith("\n"):
+        patch_str += "\n"
+    return patch_str
 
 
 def _apply_patch(original_content: str, patch: str) -> str:
@@ -170,7 +173,7 @@ def propose_code_patch(file_path: str, patch: str) -> dict[str, str]:
     try:
         # Read original content and apply patch
         original_content = original_file.read_text(encoding="utf-8")
-        modified_content = _apply_patch(original_content, _evaluate_patch_hunk(patch))
+        modified_content = _apply_patch(original_content, _eval_patch_hunk(patch))
 
         # Create temporary file with modified content
         tmp_dir = _ensure_temp_dir()
