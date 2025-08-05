@@ -16,16 +16,18 @@ def get_source_code(  # noqa: C901
     include_context: bool = False,  # noqa: FBT001, FBT002
 ) -> dict[str, Any]:
     """
-    Retrieve complete source code for specific functions, classes, or methods.
+    Retrieve complete source code for specific functions, classes, methods, or files.
+    Use when: You need the actual implementation code.
 
     Input:
-        target_type: 'function', 'class', 'method', or 'file'
-        name: Exact name of function/class to retrieve
-        file_path: Specific file to look in (optional)
-        include_context: Include surrounding code context
+        - target_type: 'function', 'class', 'method', or 'file'
+        - name: Exact name of function/class to retrieve
+        - file_path: Specific file to look in (optional)
+        - include_context: Include surrounding code context
 
-    Use when: You need the actual implementation code.
-    Returns: Complete source code with line numbers.
+    Returns:
+        - dict:Complete source code with line numbers.
+
     """
     if target_type == "file":
         if not file_path:
