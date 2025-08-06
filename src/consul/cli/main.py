@@ -15,6 +15,7 @@ FLOWS = {
     "chat": ChatTask(AvailableFlow.CHAT),
     "coder": ReactAgentFlow(AvailableFlow.CODER),
     "tester": ReactAgentFlow(AvailableFlow.TESTER),
+    "arq": ReactAgentFlow(AvailableFlow.ARCHITECT),
 }
 
 
