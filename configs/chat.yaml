@@ -6,7 +6,7 @@ tags:
   - "llm"
 
 # llm configuration
-llm_name: "gpt-4.1"
+llm_name: "gpt-5-chat"
 llm_params: 
   temperature: 0
   max_tokens: 512
