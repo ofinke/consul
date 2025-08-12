@@ -142,7 +142,6 @@ agent:
 # tools
 tools:
   - find_patterns
-  - find_code_content
   - get_source_code
   - save_to_file
   - propose_new_code
