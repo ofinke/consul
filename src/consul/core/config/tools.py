@@ -1,7 +1,7 @@
 from enum import Enum
 
 from consul.tools.files import save_to_file
-from consul.tools.find import find_patterns
+from consul.tools.find import find
 from consul.tools.propose_code import propose_code_edit, propose_new_code
 from consul.tools.retrieve_code import get_source_code
 from consul.tools.tests import run_pytest
@@ -9,7 +9,7 @@ from consul.tools.tests import run_pytest
 
 class AvailableTools(Enum):
     SAVE_TO_FILE = "save_to_file"
-    FIND_PATTERNS = "find_patterns"
+    FIND = "find"
     GET_SOURCE_CODE = "get_source_code"
     RUN_PYTEST = "run_pytest"
     PROPOSE_CODE_EDIT = "propose_code_edit"
@@ -18,7 +18,7 @@ class AvailableTools(Enum):
 
 TOOL_MAPPING = {
     AvailableTools.SAVE_TO_FILE: save_to_file,
-    AvailableTools.FIND_PATTERNS: find_patterns,
+    AvailableTools.FIND: find,
     AvailableTools.GET_SOURCE_CODE: get_source_code,
     AvailableTools.RUN_PYTEST: run_pytest,
     AvailableTools.PROPOSE_CODE_EDIT: propose_code_edit,

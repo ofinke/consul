@@ -160,5 +160,5 @@ agent:
 
 # tools
 tools:
-  - find_patterns
+  - find
   - get_source_code
