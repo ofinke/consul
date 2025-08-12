@@ -13,7 +13,7 @@ tags:
 llm_name: "gpt-5-chat"
 llm_params: 
   temperature: 0
-  max_tokens: 25000
+  max_tokens: 16384
   timeout: 300
 
 # prompts
