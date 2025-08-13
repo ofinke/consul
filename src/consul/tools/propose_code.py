@@ -67,11 +67,13 @@ def _eval_patch_hunk(patch: str) -> str:
 
     lines, out_lines, i = patch.splitlines(), [], 0
     while i < len(lines):
+        # look if the hunk header is malformed
+        if lines[i].strip() == "@@":
+            msg = "Invalid hunk header: '@@' is not a valid unified diff hunk header"
+            raise ValueError(msg)
+        # look if the hunk header is correct and evalaute its correctness
         match = hunk_header_re.match(lines[i])
         if match:
-            if lines[i].strip() == "@@":
-                msg = "Invalid hunk header: '@@' is not a valid unified diff hunk header"
-                raise ValueError(msg)
             original_header = lines[i]
             hunk_body = []
             i += 1

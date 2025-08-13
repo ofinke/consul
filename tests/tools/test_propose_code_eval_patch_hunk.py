@@ -3,6 +3,8 @@ Tests for the _eval_patch_hunk function in propose_code.py.
 Covers happy path, edge cases, and header auto-insertion.
 """
 
+import pytest
+
 from src.consul.tools.propose_code import _eval_patch_hunk
 
 
@@ -74,3 +76,16 @@ def test_patch_with_no_hunks_is_unchanged() -> None:
     result = _eval_patch_hunk(patch)
     assert result.startswith("--- a/file.txt\n+++ b/file.txt\n"), "File headers should be added if missing."
     assert "some random text" in result and "not a diff" in result, "Content should be preserved."  # noqa: PT018
+
+
+def test_patch_with_only_double_at_symbols_raises_value_error() -> None:
+    """Ensure that a patch containing a hunk header with only '@@' raises ValueError."""
+    # This header matches the regex but has no valid line numbers, triggering the '@@' only check.
+    patch = "--- a/file.txt\n+++ b/file.txt\n@@\n line1\n"
+    with pytest.raises(
+        ValueError, match="Invalid hunk header: '@@' is not a valid unified diff hunk header"
+    ) as exc_info:
+        _eval_patch_hunk(patch)
+    assert "Invalid hunk header" in str(exc_info.value), (
+        "Expected ValueError message to indicate invalid hunk header when only '@@' is present."
+    )
