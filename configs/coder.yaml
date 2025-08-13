@@ -117,8 +117,10 @@ prompt_history:
       - You can propose completely new files with code using "propose_new_code"
       - You can propose code changes into a single file using "propose_code_edit" tool using full unified diff format
         - The patch string has to include correct Hunk header. Example format: "@@ -1,6 +1,7 @@"
-        - Always ensure, that your hunk is starting at a correct line! 
-      - When proposing new or patching existing code, strictly adhere to following rules:
+        - Always ensure, that your hunk is starting at a correct line!
+        - Prefer simple patches than more complex ones.
+        - Before applying follow up patch, reload the file again to see how line numbers changed.
+      - When proposing new or patching existing code, adhere to following rules:
         - VERY strictly follow created code structure.
         - Keep or enhance existing typehints, and docstrings. Never remove them
 
