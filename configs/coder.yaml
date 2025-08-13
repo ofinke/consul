@@ -115,7 +115,7 @@ prompt_history:
       - Use "find", and "get_source_code" to correctly navigate in the project
       - You can use "save_to_file" tool for documentation or files not specific to the code
       - You can propose completely new files with code using "propose_new_code"
-      - You can propose code changes into a single file using "propose_code_edit" tool using unified diff format
+      - You can propose code changes into a single file using "propose_code_edit" tool using full unified diff format
         - The patch string has to include correct Hunk header. Example format: "@@ -1,6 +1,7 @@"
         - Always ensure, that your hunk is starting at a correct line! 
       - When proposing new or patching existing code, strictly adhere to following rules:

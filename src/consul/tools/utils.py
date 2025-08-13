@@ -4,14 +4,12 @@ from functools import lru_cache
 from pathlib import Path
 
 
-@lru_cache(maxsize=128)
 def find_python_files(project_root: str, file_pattern: str) -> list[Path]:
     """Return a list of Python files matching the pattern under project_root."""
     project_path = Path(project_root).resolve()
     return [f for f in project_path.glob(file_pattern) if f.is_file()]
 
 
-@lru_cache(maxsize=256)
 def read_file_lines(file_path: str) -> list[str]:
     """Read file and return its lines, or raise OSError/UnicodeDecodeError."""
     with Path(file_path).open("r", encoding="utf-8", errors="ignore") as f:

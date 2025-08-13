@@ -46,65 +46,46 @@ def _get_user_approval() -> tuple[bool, str]:
 
 def _eval_patch_hunk(patch: str) -> str:
     """
-    Checks and repairs all hunks in a unified diff patch if the hunk header doesn't match the actual number of lines
-    in the hunk body. Returns the (possibly fixed) patch as a string.
+    Checks and repairs all hunks in a unified diff patch if the hunk header doesn't match
+    the actual number of lines in the hunk body. Returns the (possibly fixed) patch as a string.
     """
     if not any(line.startswith("--- ") for line in patch.splitlines()):
         patch = "--- a/file.txt\n+++ b/file.txt\n" + patch
 
-    hunk_header_re = re.compile(
-        r"^@@ "
-        r"-([1-9]\d*)(?:,([1-9]\d*))?\s"  # group(1): old_start, group(2): old_count (optional)
-        r"\+([1-9]\d*)(?:,([1-9]\d*))?"  # group(3): new_start, group(4): new_count (optional)
-        r" @@(.*)$"  # group(5): optional section
-    )
+    hunk_header_re = re.compile(r"^@@ -([1-9]\d*)(?:,([1-9]\d*))?\s\+([1-9]\d*)(?:,([1-9]\d*))? @@(.*)$")
 
-    lines = patch.splitlines()
-    out_lines = []
-    i = 0
+    def process_hunk(header_match: re.Match[str], body: list[str], original_header: str) -> str:
+        """Process a single hunk, verifying and fixing line counts if necessary."""
+        old_lines = sum(1 for line in body if line.startswith((" ", "-")))
+        new_lines = sum(1 for line in body if line.startswith((" ", "+")))
+        old_start, old_count = int(header_match[1]), int(header_match[2] or 1)
+        new_start, new_count = int(header_match[3]), int(header_match[4] or 1)
+        section = header_match[5] or ""
+        if old_count != old_lines or new_count != new_lines:
+            return f"@@ -{old_start},{old_lines} +{new_start},{new_lines} @@{section}"
+        return original_header
+
+    lines, out_lines, i = patch.splitlines(), [], 0
     while i < len(lines):
-        line = lines[i]
-        m = hunk_header_re.match(line)
-        if m:
-            # Save hunk header and body for now
-            hunk_header = line
+        match = hunk_header_re.match(lines[i])
+        if match:
+            if lines[i].strip() == "@@":
+                msg = "Invalid hunk header: '@@' is not a valid unified diff hunk header"
+                raise ValueError(msg)
+            original_header = lines[i]
             hunk_body = []
             i += 1
-            # Stop at the next hunk header or end of patch
             while i < len(lines) and not hunk_header_re.match(lines[i]):
                 hunk_body.append(lines[i])
                 i += 1
-            # Count old and new lines in hunk body
-            old_lines = 0
-            new_lines = 0
-            for body_line in hunk_body:
-                if body_line.startswith((" ", "-")):
-                    old_lines += 1
-                if body_line.startswith((" ", "+")):
-                    new_lines += 1
-            # Prepare fixed counts
-            old_start = int(m.group(1))
-            old_count = int(m.group(2)) if m.group(2) else 1
-            new_start = int(m.group(3))
-            new_count = int(m.group(4)) if m.group(4) else 1
-            section = m.group(5) or ""
-            # Only fix if mismatched
-            if old_count != old_lines or new_count != new_lines:
-                fixed_header = f"@@ -{old_start},{old_lines} +{new_start},{new_lines} @@{section}"
-                out_lines.append(fixed_header)
-            else:
-                out_lines.append(hunk_header)
+            out_lines.append(process_hunk(match, hunk_body, original_header))
             out_lines.extend(hunk_body)
-
         else:
-            out_lines.append(line)
-            i += 1  # Only increment when we're not processing a hunk
+            out_lines.append(lines[i])
+            i += 1
 
-    # ensure trailing newline
     patch_str = "\n".join(out_lines)
-    if not patch_str.endswith("\n"):
-        patch_str += "\n"
-    return patch_str
+    return patch_str if patch_str.endswith("\n") else patch_str + "\n"
 
 
 def _apply_patch(original_content: str, patch: str) -> str:
