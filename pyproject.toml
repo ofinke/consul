@@ -21,6 +21,7 @@ dependencies = [
     "mcp>=1.12.1",
     "langchain-mcp-adapters>=0.1.9",
     "unidiff>=0.7.5",
+    "pathspec>=0.12.1",
 ]
 
 [project.scripts]

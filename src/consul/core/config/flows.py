@@ -15,6 +15,7 @@ class AvailableFlow(Enum):
     CHAT = "chat"
     CODER = "coder"
     TESTER = "tester"
+    ARCHITECT = "arq"
 
 
 class LLMParameters(BaseModel):
@@ -56,6 +57,7 @@ def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
     config_mapping = {
         AvailableFlow.CODER: BaseAgentConfig,
         AvailableFlow.TESTER: BaseAgentConfig,
+        AvailableFlow.ARCHITECT: BaseAgentConfig,
     }
 
     # try to load data from default config

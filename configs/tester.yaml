@@ -8,10 +8,10 @@ tags:
   - "agent"
 
 # llm configuration
-llm_name: "gpt-4.1"
+llm_name: "gpt-5-chat"
 llm_params: 
   temperature: 0
-  max_tokens: 25000
+  max_tokens: 16384
   timeout: 300
 
 
@@ -70,11 +70,13 @@ prompt_history:
       ## Tool usage
       - When you are calling tools, call only tools. Don't include anything else! The user cannot see it.
       - Use all available tools at your disposal to succesfully accomplish your task
-      - Use "find_patterns", "find_code_content", and "get_source_code" to correctly navigate in the project
+      - Use "find", and "get_source_code" to correctly navigate in the project
       - You can propose completely new files with code using "propose_new_code"
       - You can propose code changes into a single file using "propose_code_edit" tool using unified diff format
         - The patch string has to include correct Hunk header. Example format: "@@ -1,6 +1,7 @@"
-        - Always ensure, that your hunk is starting at a correct line! 
+        - Always ensure, that your hunk is starting at a correct line!
+        - Prefer simple patches than more complex ones.
+        - Before applying follow up patch, reload the file again to see how line numbers changed.
       - When proposing new or patching existing code, strictly adhere to following rules:
         - VERY strictly follow created code structure.
         - Keep or enhance existing typehints, and docstrings. Never remove them
@@ -94,8 +96,7 @@ agent:
 
 # tools
 tools:
-  - find_patterns
-  - find_code_content
+  - find
   - get_source_code
   - propose_new_code
   - propose_code_edit
