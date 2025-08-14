@@ -8,41 +8,30 @@ Consul 🧑‍🔬 is a terminal-based tool featuring a variety of LLM agents an
                                                                                                           
 - **Chat Flow:** Natural language chat interface for general queries and assistance.                                   
 - **Coder Flow:** Design new features, analyze and document codebases, and generate documentation.                     
-- **Tester Flow:** Create comprehensive tests and interactively evaluate their functionality.                          
+- **Tester Flow:** Create comprehensive tests and interactively evaluate their functionality.   
+- **Arq Flow:** Expert in backend and AI system architecture, designing scalable, secure, and maintainable solutions.                    
 
 
 ## Quick start
 
-### Environment Variables
+### I want to edit prompts or anything else
 
-Copy `.env.example` to `.env` and fill in the required values or export the variables into your terminal.
-
-### Local Installation
+Pull the repository, and from the root of the repository run
 
 ```bash
-uv sync --all-extras --frozen
+uv tool install .
 ```
-
-Run the CLI locally with:
-
-```bash
-uv run consul
-```
-
-### Global Installation
-
-From the project root, install globally with:
-
-```bash
-pip install -e .
-```
-
-Then invoke the CLI with:
+Then export environmental variables from `env.example` (one set of keys is enough). The agent is now available globally using command
 
 ```bash
 consul
 ```
-Installation using pipx doesn't work for now [TBD].
+
+If you make any changes to the configs or anything else, run the install command again with `--force-reinstall` flag.
+
+### I want Consul as it is
+
+TBD
 
 ## Usage
 
@@ -64,6 +53,7 @@ consul -f tester
  | chat    | Basic chat interface for general queries                           |                                       
  | coder   | Feature design, codebase analysis, and documentation generation    |                                       
  | tester  | Interactive test creation and evaluation                           |
+ | arq     | IT architect, can read code but cannot edit it                     |
 
 ## How it works
 

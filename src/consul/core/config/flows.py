@@ -1,5 +1,6 @@
 from enum import Enum
 from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 
 import yaml
@@ -62,9 +63,10 @@ def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
 
     # try to load data from default config
     try:
-        path = get_project_root() / "configs" / f"{task.value}.yaml"
-        path = path.resolve()
-        with Path.open(path, "r", encoding="utf-8") as file:
+        resource_pkg = "consul.configs"
+        resource_name = f"{task.value}.yaml"
+        config_path = resources.files(resource_pkg).joinpath(resource_name)
+        with config_path.open("r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
         logger.debug(f"Loaded config for '{task.value}' from YAML file.")
     except FileNotFoundError as e:
