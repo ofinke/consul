@@ -1,6 +1,6 @@
 [project]
 name = "consul"
-version = "0.0.1"
+version = "0.1.0"
 description = "Set of LLM Tools and Agents for assistance."
 readme = "README.md"
 authors = [
@@ -30,6 +30,14 @@ consul = "consul.cli.main:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/consul"]
+
+[tool.hatch.build]
+include = [
+    "consul/configs/*.yaml"
+]
 
 [dependency-groups]
 dev = [
