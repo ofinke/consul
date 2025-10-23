@@ -1,13 +1,16 @@
 from collections.abc import Callable
 
 import click
+from loguru import logger
 from pydantic import BaseModel
+
+from consul.core.config.flows import AvailableFlow
 
 
 class UserArgs(BaseModel):
     verbose: bool
     quiet: bool
-    flow: str
+    flow: AvailableFlow
     message: str
 
 
@@ -24,6 +27,13 @@ def consul_user_args(func: Callable[[UserArgs], None]) -> Callable[..., None]:
         if verbose and quiet:
             msg = "Cannot use both --verbose and --quiet flags"
             raise click.BadParameter(msg)
+
+        # try to assign flow name to existing flow
+        try:
+            flow = AvailableFlow(flow)
+        except ValueError:
+            logger.warning(f"'{flow}' not a name of existing flow, starting 'chat' flow")
+            flow = AvailableFlow("chat")
 
         args = UserArgs(verbose=verbose, quiet=quiet, flow=flow, message=message)
         func(args)
