@@ -1,3 +1,4 @@
+import uuid
 from typing import ClassVar
 
 from langchain_core.messages import BaseMessage, ChatMessage
@@ -10,11 +11,16 @@ from consul.flows.tasks.chat import ChatTask
 
 
 class FlowSession:
-    """Chat session managment. Holds chat history and manages logging."""
+    """
+    Chat session managment. Holds chat history and manages logging.
 
-    # class variables
+    Each conversation has a unique identificator for logging purposes. This ID is restarted, when history is cleared.
+    """
+
+    # session variables
     chat_history: list[BaseMessage]
     flow: BaseFlow
+    cid: str
 
     # existing flows
     available_flows: ClassVar[dict[AvailableFlow, BaseFlow]] = {
@@ -28,6 +34,7 @@ class FlowSession:
         """Initialize with first flow and empty history."""
         self.chat_history = []
         self.flow = self.available_flows[flow]
+        self.cid = str(uuid.uuid4())
 
     @property
     def str_flow_info(self) -> str:
@@ -35,14 +42,18 @@ class FlowSession:
         return f"flow '{self.flow.config.name}'; ver: {self.flow.config.version}; {self.flow.config.description}"
 
     def clear_history(self) -> None:
+        """Clear chat history and create a new conversation id."""
         logger.debug("Clearing session history.")
         self.chat_history = []
+        self.cid = str(uuid.uuid4())
 
     def change_flow(self, flow: AvailableFlow) -> None:
+        """Change used flow."""
         logger.debug(f"Changing flow to '{flow.value}'")
         self.flow = self.available_flows[flow]
 
     def post_message(self, message: str) -> str:
+        """Call flow with full history and new user message."""
         # convert message in desired format
         user_message = ChatMessage(role="user", content=message)
         self.chat_history.append(user_message)
