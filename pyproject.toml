@@ -22,6 +22,8 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.9",
     "unidiff>=0.7.5",
     "pathspec>=0.12.1",
+    "sqlalchemy>=2.0.41",
+    "sqlmodel>=0.0.27",
 ]
 
 [project.scripts]

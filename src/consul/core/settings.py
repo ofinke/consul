@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     azure: AzureCredentials | None = None
     litellm: GeneralCredentials | None = None
 
+    # Database
+    db_url: str = "sqlite:///./consul_local.db"
+
     @model_validator(mode="after")
     def check_llm_credentials(self) -> "Settings":
         if self.azure is None and self.litellm is None:

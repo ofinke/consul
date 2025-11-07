@@ -122,7 +122,7 @@ class ConsulInterface:
             finally:
                 self.session.change_flow(run_this_flow)
                 TerminalHandler.display_message(f"Starting {self.session.str_flow_info}")
-            return f"Flow changed to {self.session.flow.config.name} and memory cleared."
+            return f"Flow changed to {self.session.flow.config.name}."
 
         # save data to markdown
         if order in self._commands.SAVE:

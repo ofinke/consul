@@ -16,16 +16,9 @@ class ChatTask(BaseFlow):
     def state_schema(self) -> BaseGraphState:
         return BaseGraphState
 
-    @property
-    def output_schema(self) -> BaseGraphState:
-        return BaseGraphState
-
     def build_system_prompt(self) -> list[ChatMessage]:
         return [
-            ChatMessage(
-                role=turn.side,
-                content=turn.text.format_map(PROMPT_FORMAT_MAPPING),
-            )
+            ChatMessage(role=turn.side, content=turn.text.format_map(PROMPT_FORMAT_MAPPING))
             for turn in self.config.prompt_history
         ]
 
@@ -36,7 +29,7 @@ class ChatTask(BaseFlow):
         def llm_node(state: BaseGraphState) -> BaseGraphState:
             full_history = [*self._system_prompt, *state.messages]
             response = self._llm.invoke(full_history)
-            return self.state_schema(messages=[*state.messages, response])
+            return self.state_schema(messages=[*state.messages, response], **state.model_dump(exclude="messages"))
 
         graph.add_node("llm_call", llm_node)
         graph.set_entry_point("llm_call")

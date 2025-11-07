@@ -5,6 +5,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, ChatMessage
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from loguru import logger
 from pydantic import BaseModel
 
@@ -15,15 +16,14 @@ from consul.core.settings import settings
 class BaseFlowInput(BaseModel):
     """Base input schema - tasks should subclass this."""
 
+    cid: str
+
 
 class BaseGraphState(BaseModel):
     """Base state of the langgraph graph."""
 
+    cid: str
     messages: Sequence[BaseMessage]
-
-
-class BaseFlowOutput(BaseGraphState):
-    """Base output schema - Use this for limit what output is presented to user."""
 
 
 class BaseFlow(ABC):
@@ -34,8 +34,7 @@ class BaseFlow(ABC):
         Initialize the base flow for a task.
 
         Args:
-            flow_name (AvailableFlow): The flow name specifying
-                which flow/task to run and its associated configuration.
+            flow_name (AvailableFlow): The flow name specifying which flow/task to run and its associated configuration.
 
         Attributes:
             _flow_name (AvailableFlow): Stores the flow name.
@@ -66,18 +65,24 @@ class BaseFlow(ABC):
     def state_schema(self) -> BaseGraphState:
         """Schema used in the graph."""
 
-    @property
-    @abstractmethod
-    def output_schema(self) -> BaseFlowOutput:
-        """Output schema. Use if you want to limit what is returned to the user."""
+    # NOTE: The idea here is, that if I don't want to present some parts of the inner state to the user,
+    # I can define OutputSchema and the return of the .execute() method, I can validate date using output_schema.
+    # But I'm the user so I can do whatever I want. Keeping it here if I decide to return to it later.
+    # @property
+    # @abstractmethod
+    # def output_schema(self) -> BaseFlowOutput:
+    #     """Output schema. Use if you want to limit what is returned to the user."""
 
     @abstractmethod
     def build_system_prompt(self) -> list[ChatMessage]:
         """Prepares the system prompt."""
 
     @abstractmethod
-    def build_graph(self) -> StateGraph:
-        """Build the LangGraph graph for this task."""
+    def build_graph(self) -> StateGraph | CompiledStateGraph:
+        """
+        Define langgraph graph of operations.
+        Returns either StateGraph for custom graph definitions or already compiled graph when using predefined ones.
+        """
 
     # Common interface
     def get_llm(self) -> BaseChatModel:
@@ -134,9 +139,9 @@ class BaseFlow(ABC):
         # Get or build graph
         if not self._compiled_graph:
             self._graph = self.build_graph()
-            self._compiled_graph = self._graph.compile()
-            logger.debug(f"Task '{self.config.name}' graph edges: {self._graph.edges}")
-            logger.debug(f"Task '{self.config.name}' graph nodes: {self._graph.nodes}")
+            self._compiled_graph = self._graph if isinstance(self._graph, CompiledStateGraph) else self._graph.compile()
+            logger.debug(f"Task '{self.config.name}' graph edges: {self._compiled_graph.get_graph().edges}")
+            logger.debug(f"Task '{self.config.name}' graph nodes: {self._compiled_graph.get_graph().nodes}")
 
         return validated_input
 

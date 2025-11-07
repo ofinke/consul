@@ -5,6 +5,7 @@ from langchain_core.messages import BaseMessage, ChatMessage
 from loguru import logger
 
 from consul.core.config.flows import AvailableFlow
+from consul.flows.agents.lang_react import LangReactFlow
 from consul.flows.agents.react import ReactAgentFlow
 from consul.flows.base import BaseFlow
 from consul.flows.tasks.chat import ChatTask
@@ -27,7 +28,7 @@ class FlowSession:
         AvailableFlow.CHAT: ChatTask(AvailableFlow.CHAT),
         AvailableFlow.CODER: ReactAgentFlow(AvailableFlow.CODER),
         AvailableFlow.TESTER: ReactAgentFlow(AvailableFlow.TESTER),
-        AvailableFlow.ARCHITECT: ReactAgentFlow(AvailableFlow.ARCHITECT),
+        AvailableFlow.ARCHITECT: LangReactFlow(AvailableFlow.ARCHITECT),
     }
 
     def __init__(self, flow: AvailableFlow) -> None:
@@ -59,7 +60,7 @@ class FlowSession:
         self.chat_history.append(user_message)
 
         # Execute the flow
-        result = self.flow.execute({"messages": self.chat_history})
+        result = self.flow.execute({"messages": self.chat_history, "cid": self.cid})
 
         # Store response in history and return model answer
         new_history_part = result.messages[len(self.chat_history) :]

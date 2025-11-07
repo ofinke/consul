@@ -16,6 +16,7 @@ class ReactAgentFlow(BaseFlow):
     """Base class for agent tasks with tool support."""
 
     def __init__(self, flow_name: AvailableFlow) -> None:
+        """Same as BaseFlow init + prepare variable for tools."""
         super().__init__(flow_name)
         self._tools_by_name: dict[str, BaseTool] = {}
 
@@ -25,10 +26,6 @@ class ReactAgentFlow(BaseFlow):
 
     @property
     def state_schema(self) -> BaseGraphState:
-        return BaseGraphState
-
-    @property
-    def output_schema(self) -> BaseGraphState:
         return BaseGraphState
 
     def get_tools(self) -> list[BaseTool]:
@@ -65,7 +62,7 @@ class ReactAgentFlow(BaseFlow):
             """Calls LLM with message history and appends LLM response."""
             full_history = [*self._system_prompt, *state.messages]
             response = self._llm.invoke(full_history)
-            return self.state_schema(messages=[*state.messages, response])
+            return self.state_schema(messages=[*state.messages, response], **state.model_dump(exclude="messages"))
 
         def tool_node(state: BaseGraphState) -> BaseGraphState:
             """Checks if last message contains tool call and executes it."""
@@ -87,7 +84,7 @@ class ReactAgentFlow(BaseFlow):
                     )
                 )
                 logger.success(f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].content[:25]!r}...'")
-            return self.state_schema(messages=[*state.messages, *tool_outputs])
+            return self.state_schema(messages=[*state.messages, *tool_outputs], **state.model_dump(exclude="messages"))
 
         def should_continue(state: BaseGraphState) -> str:
             """Determine if agent should continue or end."""
