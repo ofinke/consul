@@ -59,8 +59,15 @@ class FlowSession:
         user_message = ChatMessage(role="user", content=message)
         self.chat_history.append(user_message)
 
+        # define input dictionary state
+        input_state = {
+            "messages": self.chat_history,
+            "cid": self.cid,
+            # "flow": self.flow.value,
+        }
+
         # Execute the flow
-        result = self.flow.execute({"messages": self.chat_history, "cid": self.cid})
+        result = self.flow.execute(input_state)
 
         # Store response in history and return model answer
         new_history_part = result.messages[len(self.chat_history) :]

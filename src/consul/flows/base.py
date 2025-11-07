@@ -22,7 +22,9 @@ class BaseFlowInput(BaseModel):
 class BaseGraphState(BaseModel):
     """Base state of the langgraph graph."""
 
+    # Information for logging
     cid: str
+    # message history
     messages: Sequence[BaseMessage]
 
 

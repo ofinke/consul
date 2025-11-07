@@ -2,6 +2,7 @@ import functools
 
 from pydantic import BaseModel
 from sqlalchemy import create_engine
+from sqlmodel import Session, select
 
 from consul.core.settings import settings
 
@@ -15,11 +16,28 @@ class DBHandler:
 
     def store[T: BaseModel](self, data: list[T]) -> None:
         """Stores data of type[BaseModel] into corresponding table in database."""
-        raise NotImplementedError
+        if not data:
+            return
 
-    def load[T: BaseModel](self, data_schema: T) -> None:
+        with Session(self.engine) as session:
+            try:
+                for item in data:
+                    session.add(item)
+                session.commit()
+            except Exception:
+                session.rollback()
+                raise
+
+    def load[T: BaseModel](self, data_schema: type[T]) -> list[T]:
         """Loads whole table based on its definition."""
-        raise NotImplementedError
+        with Session(self.engine) as session:
+            try:
+                statement = select(data_schema)
+                results = session.exec(statement)
+                return list(results.all())
+            except Exception:
+                session.rollback()
+                raise
 
 
 @functools.cache()
