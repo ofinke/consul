@@ -23,6 +23,7 @@ class BaseGraphState(BaseModel):
     """Base state of the langgraph graph."""
 
     # Information for logging
+    flow: str
     cid: str
     # message history
     messages: Sequence[BaseMessage]
@@ -39,14 +40,14 @@ class BaseFlow(ABC):
             flow_name (AvailableFlow): The flow name specifying which flow/task to run and its associated configuration.
 
         Attributes:
-            _flow_name (AvailableFlow): Stores the flow name.
+            flow_name (AvailableFlow): Stores the flow name.
             _system_prompt (list[ChatMessage]): Cached list of system prompt messages.
             _graph (StateGraph | None): LangGraph graph instance for the flow (uncompiled).
             _compiled_graph: Compiled LangGraph graph ready for execution.
             _llm (AzureChatOpenAI | None): The language model interface for LLM calls.
 
         """
-        self._flow_name: AvailableFlow = flow_name
+        self.flow_name: AvailableFlow = flow_name
         self._system_prompt: list[ChatMessage] = []
         self._graph: StateGraph | None = None
         self._compiled_graph = None
@@ -54,7 +55,7 @@ class BaseFlow(ABC):
 
     @property
     def config(self) -> BaseFlowConfig:
-        return get_flow_config(self._flow_name)
+        return get_flow_config(self.flow_name)
 
     # Core abstractions - must implement
     @property
@@ -125,6 +126,7 @@ class BaseFlow(ABC):
 
         """
         # Validate input based on input schema
+        input_data["flow"] = self.flow_name.value
         validated_input = self.input_schema(**input_data)
         logger.debug(f"Task '{self.config.name}' {validated_input=}")
 

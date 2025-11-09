@@ -1,5 +1,6 @@
+from typing import TYPE_CHECKING
+
 from langchain.agents import create_agent
-from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 from loguru import logger
 
@@ -7,6 +8,10 @@ from consul.core.config.flows import AvailableFlow
 from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
+from consul.flows.logging import LoggingMiddleware
+
+if TYPE_CHECKING:
+    from langchain_core.tools import BaseTool
 
 
 class LangReactFlow(BaseFlow):
@@ -29,10 +34,6 @@ class LangReactFlow(BaseFlow):
     def state_schema(self) -> BaseGraphState:
         return BaseGraphState
 
-    def get_tools(self) -> list[BaseTool]:
-        """Return list of tools available to the agent."""
-        return [TOOL_MAPPING[tool] for tool in self.config.tools]
-
     def build_system_prompt(self) -> str:
         """
         Builds system prompt from config.
@@ -42,7 +43,7 @@ class LangReactFlow(BaseFlow):
         chat_history = [turn.text.format_map(PROMPT_FORMAT_MAPPING) for turn in self.config.prompt_history]
         if len(chat_history) > 1:
             msg = (
-                f"Flow '{self._flow_name.value}' has more than 1 defining system messages.",
+                f"Flow '{self.flow_name.value}' has more than 1 defining system messages.",
                 "LangReactFlow needs system prompt defined as single message. Merging history into a single prompt.",
             )
             logger.warning(msg)
@@ -50,9 +51,14 @@ class LangReactFlow(BaseFlow):
 
     def build_graph(self) -> CompiledStateGraph:
         """Returns langgraph pre-defined react agent."""
+        logger.debug("Creating predefined langgraph react agent using 'create_agent' function")
         return create_agent(
             model=self.get_llm(),
-            tools=self.get_tools(),
+            tools=[TOOL_MAPPING[tool] for tool in self.config.tools],
             system_prompt=self._system_prompt,
             state_schema=self.state_schema,
+            middleware=[
+                LoggingMiddleware(),
+                # ToolMonitoringMiddleware(),
+            ],
         )

@@ -20,3 +20,5 @@ wheels/
 /.tmp
 /tmp
 /temp
+
+*.db

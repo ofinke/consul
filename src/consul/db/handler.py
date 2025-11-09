@@ -1,8 +1,9 @@
 import functools
 
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import create_engine
-from sqlmodel import Session, select
+from sqlmodel import Session, SQLModel, select
 
 from consul.core.settings import settings
 
@@ -14,9 +15,15 @@ class DBHandler:
         """Initializes engine to database."""
         self.engine = create_engine(settings.db_url)
 
+        # Importing definitions of data models required to create table models.
+        import consul.db.tables  # noqa: F401, PLC0415
+
+        SQLModel.metadata.create_all(bind=self.engine)
+
     def store[T: BaseModel](self, data: list[T]) -> None:
         """Stores data of type[BaseModel] into corresponding table in database."""
         if not data:
+            logger.debug("No data to store.")
             return
 
         with Session(self.engine) as session:
@@ -27,6 +34,7 @@ class DBHandler:
             except Exception:
                 session.rollback()
                 raise
+        logger.debug(f"Stored {len(data)} into '{data[0].__tablename__}' table.")
 
     def load[T: BaseModel](self, data_schema: type[T]) -> list[T]:
         """Loads whole table based on its definition."""
@@ -40,7 +48,7 @@ class DBHandler:
                 raise
 
 
-@functools.cache()
+@functools.cache
 def get_db_handler() -> DBHandler:
-    msg = "Not yet"
-    raise NotImplementedError(msg)
+    """Return database handler."""
+    return DBHandler()

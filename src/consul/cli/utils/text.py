@@ -70,10 +70,10 @@ class TerminalHandler:
         return cls._console
 
     @classmethod
-    def _init_spinner(cls) -> tuple[Live, Spinner]:
+    def _init_spinner(cls, message: str) -> tuple[Live, Spinner]:
         """Initialize spinner components."""
         if cls._live_spinner is None or cls._spinner is None:
-            spinner_text = Text("Consuliting artificial neurons...", style=cls._main_col)
+            spinner_text = Text(f"Consulting {message} ...", style=cls._main_col)
             cls._spinner = Spinner("arrow", text=spinner_text, style=cls._main_col)
             cls._live_spinner = Live(
                 cls._spinner,
@@ -84,9 +84,9 @@ class TerminalHandler:
         return cls._live_spinner, cls._spinner
 
     @classmethod
-    def start_spinner(cls) -> None:
+    def start_spinner(cls, message: str="artificial neurons") -> None:
         """Start Rich spinner in the terminal."""
-        live_spinner, _ = cls._init_spinner()
+        live_spinner, _ = cls._init_spinner(message=message)
         if not live_spinner.is_started:
             live_spinner.start()
 
@@ -97,6 +97,12 @@ class TerminalHandler:
             cls._live_spinner.stop()
             cls._live_spinner = None
             cls._spinner = None
+
+    @classmethod
+    def restart_spinner(cls, message: str = "artificial neurons") -> None:
+        """Restarts Rich spinner with a specific message."""
+        cls.stop_spinner()
+        cls.start_spinner(message)
 
     @classmethod
     def display_loguru_message(cls, message: "loguru.Message") -> None:

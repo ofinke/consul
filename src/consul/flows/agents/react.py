@@ -10,6 +10,7 @@ from consul.core.config.flows import AvailableFlow
 from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
+from consul.flows.logging import LoggingHandler
 
 
 class ReactAgentFlow(BaseFlow):
@@ -19,6 +20,7 @@ class ReactAgentFlow(BaseFlow):
         """Same as BaseFlow init + prepare variable for tools."""
         super().__init__(flow_name)
         self._tools_by_name: dict[str, BaseTool] = {}
+        self.logging = LoggingHandler()
 
     @property
     def input_schema(self) -> BaseGraphState:
@@ -59,10 +61,15 @@ class ReactAgentFlow(BaseFlow):
 
         # node definitions
         def llm_node(state: BaseGraphState) -> BaseGraphState:
-            """Calls LLM with message history and appends LLM response."""
+            """Logs user message, calls LLM, logs LLM answer, and appends LLM response to chat history."""
             full_history = [*self._system_prompt, *state.messages]
+            self.logging.log_message(
+                self.state_schema(messages=full_history, **state.model_dump(exclude="messages")).model_dump()
+            )
             response = self._llm.invoke(full_history)
-            return self.state_schema(messages=[*state.messages, response], **state.model_dump(exclude="messages"))
+            new_state = self.state_schema(messages=[*state.messages, response], **state.model_dump(exclude="messages"))
+            self.logging.log_message(new_state.model_dump())
+            return new_state
 
         def tool_node(state: BaseGraphState) -> BaseGraphState:
             """Checks if last message contains tool call and executes it."""

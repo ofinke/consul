@@ -1,7 +1,7 @@
 import uuid
 from typing import ClassVar
 
-from langchain_core.messages import BaseMessage, ChatMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
 
 from consul.core.config.flows import AvailableFlow
@@ -56,7 +56,7 @@ class FlowSession:
     def post_message(self, message: str) -> str:
         """Call flow with full history and new user message."""
         # convert message in desired format
-        user_message = ChatMessage(role="user", content=message)
+        user_message = HumanMessage(content=message)
         self.chat_history.append(user_message)
 
         # define input dictionary state
