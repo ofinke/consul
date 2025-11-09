@@ -45,7 +45,7 @@ class MessageLogTable(BaseTable, table=True):
 
     # Identificators
     cid: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Conversation ID"})
-    flow: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Flow type"})
+    flow: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Flow name"})
     author: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Message author"})
     # Values
     message: str = Field(
@@ -72,10 +72,10 @@ class MessageLogTable(BaseTable, table=True):
     )
 
 
-class AgentTable(BaseTable, table=False):
-    """Preparation for implementing agent definitions into database."""
+class FlowConfigTable(BaseTable, table=False):
+    """Preparation for implementing flows definitions into database."""
 
-    __tablename__ = "agents"
+    __tablename__ = "flow_configs"
 
     # LLM definition
     llm_name: str
@@ -85,4 +85,18 @@ class AgentTable(BaseTable, table=False):
     tools: None
 
     # prompt
-    
+
+
+class ArchiveTable(BaseTable, table=False):
+    """Prep for table focusing on archiving conversations."""
+
+    __tablename__ = "conversation_archive"
+
+    cid: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Conversation ID"})
+    flow: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Flow name"})
+
+    # if conversation is related to certain flow/agent and this agent wants to include some special metadata,
+    # for example coding agent want to store to which feature in which project, the conversation is related to.
+    conversation_metadata: dict
+
+    summary: str | None

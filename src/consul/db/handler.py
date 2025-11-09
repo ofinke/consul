@@ -3,6 +3,7 @@ import functools
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import create_engine
+from sqlalchemy.sql import ColumnElement
 from sqlmodel import Session, SQLModel, select
 
 from consul.core.settings import settings
@@ -36,11 +37,13 @@ class DBHandler:
                 raise
         logger.debug(f"Stored {len(data)} into '{data[0].__tablename__}' table.")
 
-    def load[T: BaseModel](self, data_schema: type[T]) -> list[T]:
+    def load[T: BaseModel](self, data_schema: type[T], where_clause: ColumnElement | None = None) -> list[T]:
         """Loads whole table based on its definition."""
         with Session(self.engine) as session:
             try:
                 statement = select(data_schema)
+                if where_clause is not None:
+                    statement = statement.where(where_clause)
                 results = session.exec(statement)
                 return list(results.all())
             except Exception:
