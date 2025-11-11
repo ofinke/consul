@@ -34,7 +34,7 @@ class LoggingHandler:
             "message": message.get("content", self.emsg),
             "tool_call": message.get("tool_calls"),
             "llm": message.get("response_metadata", {}).get("model_name"),
-            "usage_metadata": message.get("usage_metadata")
+            "usage_metadata": message.get("usage_metadata"),
         }
 
     def log_message(self, state: dict[str, Any] | AgentState) -> None:
@@ -47,8 +47,16 @@ class LoggingHandler:
         self.handler.store([to_log])
 
 
-class LoggingMiddleware(AgentMiddleware):
+class StateSchema(AgentState):
+    # Information for logging
+    flow: str
+    cid: str
+
+
+class InterfaceMiddleware(AgentMiddleware):
     """Wrapper for LoggingHandler for langgraph create_agent function."""
+
+    state_schema: StateSchema = StateSchema
 
     def __init__(self) -> None:
         """Usual init + start database handler."""

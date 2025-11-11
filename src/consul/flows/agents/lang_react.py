@@ -8,7 +8,7 @@ from consul.core.config.flows import AvailableFlow
 from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
-from consul.flows.logging import LoggingMiddleware
+from consul.flows.logging import InterfaceMiddleware
 
 if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
@@ -56,9 +56,8 @@ class LangReactFlow(BaseFlow):
             model=self.get_llm(),
             tools=[TOOL_MAPPING[tool] for tool in self.config.tools],
             system_prompt=self._system_prompt,
-            state_schema=self.state_schema,
             middleware=[
-                LoggingMiddleware(),
+                InterfaceMiddleware(),
                 # ToolMonitoringMiddleware(),
             ],
         )
