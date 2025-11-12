@@ -51,7 +51,7 @@ class StateSchema(AgentState):
     # Information for logging
     flow: str
     cid: str
-
+    # callback: Callable
 
 class InterfaceMiddleware(AgentMiddleware):
     """Wrapper for LoggingHandler for langgraph create_agent function."""
@@ -66,12 +66,18 @@ class InterfaceMiddleware(AgentMiddleware):
     def before_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
         """Log latest message before model call."""
         # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
-        self.logger.log_message(state.copy())
+        self.logger.log_message(state)
 
     def after_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
         """Log latest message after model call."""
         # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
-        self.logger.log_message(state.copy())
+        self.logger.log_message(state)
+
+        if hasattr(state.get("messages", [])[-1], "tool_calls"):
+            calls = state.get("messages", [])[-1].tool_calls
+            TerminalHandler.restart_spinner(f"{', '.join([c.get("name") for c in calls])} tool(s)")
+        else:
+            TerminalHandler.restart_spinner()
 
 
 # TODO: currently causes problems in agent, how can I make this better?
