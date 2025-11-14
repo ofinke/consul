@@ -1,20 +1,56 @@
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import AgentMiddleware, AgentState
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.runtime import Runtime
 from loguru import logger
 
 from consul.core.config.flows import AvailableFlow
 from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
 from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
-from consul.flows.logging import InterfaceMiddleware
+from consul.flows.logging import LoggingHandler
 
 if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
 
-# TODO Move the interface middleware here and rename it to ReactMiddleware. Also include the state. Update Agents to
-# work with the create_agent framework.
+
+class StateSchema(AgentState):
+    # Information for logging
+    flow: str
+    cid: str
+    callback: Callable
+
+
+class InterfaceMiddleware(AgentMiddleware):
+    """Middleware to handle logging and triggering the callback."""
+
+    state_schema: StateSchema = StateSchema
+
+    def __init__(self) -> None:
+        """Usual init + start database handler."""
+        self.logger = LoggingHandler()
+        super().__init__()
+
+    def before_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
+        """Log latest message before model call."""
+        # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
+        self.logger.log_message(state)
+        # execute callback
+        callback = state.get("callback")
+        if callable(callback):
+            callback(state=state)
+
+    def after_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
+        """Log latest message after model call."""
+        # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
+        self.logger.log_message(state)
+        # execute callback
+        callback = state.get("callback")
+        if callable(callback):
+            callback(state=state)
 
 
 class LangReactFlow(BaseFlow):
@@ -61,6 +97,5 @@ class LangReactFlow(BaseFlow):
             system_prompt=self._system_prompt,
             middleware=[
                 InterfaceMiddleware(),
-                # ToolMonitoringMiddleware(),
             ],
         )

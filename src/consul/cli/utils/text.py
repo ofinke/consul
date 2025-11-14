@@ -11,8 +11,6 @@ from rich.spinner import Spinner
 from rich.text import Text
 from rich.traceback import Traceback
 
-from consul.cli.utils.commands import Commands
-
 if TYPE_CHECKING:
     import loguru
 
@@ -242,7 +240,7 @@ class TerminalHandler:
         # Generate and display logo
         self.csl.print(self._get_logo(), end="")
         # Prepare intro message
-        intro_message = f"Welcome to the Consul CLI! Consul contains set of simple LLM flows and agents for solving small daily problems. Flow can be selected by starting consul with the '--flow' '-f' flag, available flows are: {', '.join(flows)}. During runtime, following commands can be used. {Commands.get_instructions()}."  # noqa: E501
+        intro_message = f"Welcome to the Consul CLI! Consul contains set of simple LLM flows and agents for solving small daily problems. Flow can be selected by starting consul with the '--flow' '-f' flag, available flows are: {', '.join(flows)}. Write '/h' or '/help' to print supported commands."  # noqa: E501
         self.csl.print(self._apply_smart_text_wrap(intro_message), style=self.cfg_main_color)
         self.csl.print("-" * self.cfg_max_width, style=self.cfg_main_color)
 

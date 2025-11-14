@@ -10,6 +10,13 @@ def get_project_python_version() -> str:
     # project dir
     project_dir = Path()
 
+    # .python-version
+    pyver_path = project_dir / ".python-version"
+    if pyver_path.is_file():
+        v = pyver_path.read_text(encoding="utf-8").strip()
+        if v:
+            return v
+
     # pyproject
     pyproject_path = project_dir / "pyproject.toml"
     if pyproject_path.is_file():
@@ -23,12 +30,5 @@ def get_project_python_version() -> str:
             requires_python = data.get("project", {}).get("requires-python")
             if requires_python:
                 return requires_python
-
-    # .python-version
-    pyver_path = project_dir / ".python-version"
-    if pyver_path.is_file():
-        v = pyver_path.read_text(encoding="utf-8").strip()
-        if v:
-            return v
 
     return "Python version not found"

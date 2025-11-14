@@ -1,13 +1,8 @@
-from collections.abc import Callable
 from typing import Any
 
-from langchain.agents.middleware import AgentMiddleware, AgentState
+from langchain.agents.middleware import AgentState
 from langchain.messages import AIMessage, HumanMessage, ToolMessage
-from langchain.tools.tool_node import ToolCallRequest
-from langgraph.runtime import Runtime
-from langgraph.types import Command
 
-from consul.cli.utils.text import get_terminal_handler
 from consul.db.handler import get_db_handler
 from consul.db.tables import MessageLogTable
 
@@ -45,42 +40,3 @@ class LoggingHandler:
             **self._extract_message_info(state.get("messages", [])[-1]),
         )
         self.handler.store([to_log])
-
-
-class StateSchema(AgentState):
-    # Information for logging
-    flow: str
-    cid: str
-    # callback: Callable
-
-
-# TODO: recreate the spinner update with callback
-class InterfaceMiddleware(AgentMiddleware):
-    """Wrapper for LoggingHandler for langgraph create_agent function."""
-
-    state_schema: StateSchema = StateSchema
-
-    def __init__(self) -> None:
-        """Usual init + start database handler."""
-        self.logger = LoggingHandler()
-        self.io = get_terminal_handler()
-        super().__init__()
-
-    def before_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
-        """Log latest message before model call."""
-        # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
-        self.logger.log_message(state)
-        if isinstance(state.get("messages", [])[-1], (ToolMessage, HumanMessage)):
-            self.io.restart_spinner()
-
-    def after_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
-        """Log latest message after model call."""
-        # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
-        self.logger.log_message(state)
-
-        if hasattr(state.get("messages", [])[-1], "tool_calls"):
-            calls = state.get("messages", [])[-1].tool_calls
-            msg = f"Consulting {', '.join([f"'{c.get('name')}'" for c in calls])} tool(s)"
-            self.io.restart_spinner(msg)
-        else:
-            self.io.restart_spinner()

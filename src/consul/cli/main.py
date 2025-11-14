@@ -1,29 +1,28 @@
 import click
 from loguru import logger
 
-from consul.cli.utils.commands import Commands
-from consul.cli.utils.save import save_memory
+from consul.cli.exceptions import CommandInterrupt
+from consul.cli.utils.commands import CommandProcessor
 from consul.cli.utils.text import TerminalHandler, get_terminal_handler
 from consul.cli.utils.user_args import UserArgs, consul_user_args
-from consul.core.config.flows import AvailableFlow
 from consul.flows.session import FlowSession
-
-
-class CommandInterrupt(BaseException):
-    """Runtime interrupt from user command."""
 
 
 class ConsulInterface:
     """Class representing flow of the consul cli interface."""
 
     io: TerminalHandler
-    session: FlowSession | None = None
-    _commands: Commands
+    session: FlowSession
+    commands: CommandProcessor
     user_args: UserArgs
 
     def __init__(self, user_args: UserArgs) -> None:
         """Setup console interface state."""
+        # Initialize interface
+        self.user_args = user_args
         self.io = get_terminal_handler()
+        self.session = FlowSession(self.user_args.flow)
+        self.commands = CommandProcessor(self.session)
 
         # Determine log level
         if user_args.quiet:
@@ -36,14 +35,7 @@ class ConsulInterface:
         logger.remove()
         logger.add(self.io.display_loguru_message, level=level, format="{message}")
 
-        # setup variables
-        self.user_args = user_args
-        self._commands: Commands = Commands()
-
     def start_interface(self) -> None:
-        # Start session
-        self.session = FlowSession(self.user_args.flow)
-
         # Welcome message
         self.io.echo_intro([key.value for key in self.session.available_flows])
         self.io.display_message(f"Starting {self.session.str_flow_info}")
@@ -82,8 +74,7 @@ class ConsulInterface:
 
             # Check for command
             if user_input.lower().strip().startswith("/"):
-                system_reply = self._handle_user_command(user_input.lower().strip())
-                self.io.display_message(f"Command:{system_reply}")
+                self.commands.process_input(user_input.lower().strip())
                 continue
 
             # Skip empty inputs
@@ -100,38 +91,6 @@ class ConsulInterface:
             # Display response
             self.io.stop_spinner()
             self.io.display_message(f"Assistant:{response}", format_markdown=True)
-
-    def _handle_user_command(self, command: str) -> str:
-        """Private method for handling user commands starting with '/' character."""
-        # split command
-        order, info = ([*command.split(), "", ""])[:2]
-
-        # Exit app
-        if order in self._commands.EXIT:
-            raise CommandInterrupt
-
-        # clear chat history
-        if order in self._commands.RESET:
-            self.session.clear_history()
-            return "Memory cleared!"
-
-        # change used flow
-        if order in self._commands.FLOW:
-            try:
-                run_this_flow = AvailableFlow(info)
-            except ValueError:
-                logger.warning(f"'{info}' not a name of existing flow, starting 'chat' flow")
-                run_this_flow = AvailableFlow("chat")
-            finally:
-                self.session.change_flow(run_this_flow)
-                self.io.display_message(f"Starting {self.session.str_flow_info}")
-            return f"Flow changed to {self.session.flow.config.name}."
-
-        # save data to markdown
-        if order in self._commands.SAVE:
-            path_to_saved_file = save_memory(self.session.chat_history, self.session.flow.config.name)
-            return f"Conversation history saved at '{path_to_saved_file}'"
-        return "Unknown command!"
 
 
 @consul_user_args

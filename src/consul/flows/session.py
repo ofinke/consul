@@ -4,9 +4,9 @@ from typing import ClassVar
 from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
 
+from consul.cli.utils.callback import interface_callback
 from consul.core.config.flows import AvailableFlow
 from consul.flows.agents.lang_react import LangReactFlow
-from consul.flows.agents.react import ReactAgentFlow
 from consul.flows.base import BaseFlow
 from consul.flows.tasks.chat import ChatTask
 
@@ -14,7 +14,6 @@ from consul.flows.tasks.chat import ChatTask
 class FlowSession:
     """
     Chat session managment. Holds chat history and manages logging.
-
     Each conversation has a unique identificator for logging purposes. This ID is restarted, when history is cleared.
     """
 
@@ -26,8 +25,8 @@ class FlowSession:
     # existing flows
     available_flows: ClassVar[dict[AvailableFlow, BaseFlow]] = {
         AvailableFlow.CHAT: ChatTask(AvailableFlow.CHAT),
-        AvailableFlow.CODER: ReactAgentFlow(AvailableFlow.CODER),
-        AvailableFlow.TESTER: ReactAgentFlow(AvailableFlow.TESTER),
+        AvailableFlow.CODER: LangReactFlow(AvailableFlow.CODER),
+        AvailableFlow.TESTER: LangReactFlow(AvailableFlow.TESTER),
         AvailableFlow.ARCHITECT: LangReactFlow(AvailableFlow.ARCHITECT),
     }
 
@@ -63,6 +62,7 @@ class FlowSession:
         input_state = {
             "messages": self.chat_history,
             "cid": self.cid,
+            "callback": interface_callback,
             # "flow": self.flow.value,
         }
 

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, ChatMessage
@@ -25,6 +25,7 @@ class BaseGraphState(BaseModel):
     # Information for logging
     flow: str
     cid: str
+    callback: Callable | None = None
     # message history
     messages: Sequence[BaseMessage]
 

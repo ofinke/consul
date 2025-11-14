@@ -82,10 +82,9 @@ prompt_history:
         - Keep or enhance existing typehints, and docstrings. Never remove them
       - You can run python tests using pytest with "run_pytest" tool
 
-  - side: user
-    text: |
-      You are working on a project which has the following tree structure:
-      '''
+      ## Project information
+      You are working on a project which has the following tree structure (depth is limited to 3):
+      '''plaintext
       {get_project_tree}
       '''
 
