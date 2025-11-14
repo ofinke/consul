@@ -7,7 +7,7 @@ from langchain.tools.tool_node import ToolCallRequest
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 
-from consul.cli.utils.text import TerminalHandler
+from consul.cli.utils.text import get_terminal_handler
 from consul.db.handler import get_db_handler
 from consul.db.tables import MessageLogTable
 
@@ -53,6 +53,8 @@ class StateSchema(AgentState):
     cid: str
     # callback: Callable
 
+
+# TODO: recreate the spinner update with callback
 class InterfaceMiddleware(AgentMiddleware):
     """Wrapper for LoggingHandler for langgraph create_agent function."""
 
@@ -61,12 +63,15 @@ class InterfaceMiddleware(AgentMiddleware):
     def __init__(self) -> None:
         """Usual init + start database handler."""
         self.logger = LoggingHandler()
+        self.io = get_terminal_handler()
         super().__init__()
 
     def before_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
         """Log latest message before model call."""
         # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
         self.logger.log_message(state)
+        if isinstance(state.get("messages", [])[-1], (ToolMessage, HumanMessage)):
+            self.io.restart_spinner()
 
     def after_model(self, state: AgentState, runtime: Runtime) -> None:  # noqa: ARG002
         """Log latest message after model call."""
@@ -75,26 +80,7 @@ class InterfaceMiddleware(AgentMiddleware):
 
         if hasattr(state.get("messages", [])[-1], "tool_calls"):
             calls = state.get("messages", [])[-1].tool_calls
-            TerminalHandler.restart_spinner(f"{', '.join([c.get("name") for c in calls])} tool(s)")
+            msg = f"Consulting {', '.join([f"'{c.get('name')}'" for c in calls])} tool(s)"
+            self.io.restart_spinner(msg)
         else:
-            TerminalHandler.restart_spinner()
-
-
-# TODO: currently causes problems in agent, how can I make this better?
-# "cannot access local variable 'last_ai_index' where it is not associated with a value"
-# How to make this universal for all flows? I want to show status message in spinner (using tool, etc), also print
-# messages agent shows while calling tools. Most likely I'll add a callable into a graph state which I will trigger at
-# certain positions. And implement this callable into a middleware for create_agent agent.
-
-# class ToolMonitoringMiddleware(AgentMiddleware):
-#     def wrap_tool_call(
-#         self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], ToolMessage | Command]
-#     ) -> ToolMessage | Command:
-#         TerminalHandler.restart_spinner(f"{request.tool_call['name']} tool")
-#         try:
-#             result = handler(request)
-#             print(f"Tool completed successfully")
-#             return result
-#         except Exception as e:
-#             print(f"Tool failed: {e}")
-#             raise
+            self.io.restart_spinner()

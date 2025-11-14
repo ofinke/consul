@@ -3,7 +3,7 @@ from loguru import logger
 
 from consul.cli.utils.commands import Commands
 from consul.cli.utils.save import save_memory
-from consul.cli.utils.text import TerminalHandler
+from consul.cli.utils.text import TerminalHandler, get_terminal_handler
 from consul.cli.utils.user_args import UserArgs, consul_user_args
 from consul.core.config.flows import AvailableFlow
 from consul.flows.session import FlowSession
@@ -16,12 +16,15 @@ class CommandInterrupt(BaseException):
 class ConsulInterface:
     """Class representing flow of the consul cli interface."""
 
+    io: TerminalHandler
     session: FlowSession | None = None
     _commands: Commands
     user_args: UserArgs
 
     def __init__(self, user_args: UserArgs) -> None:
         """Setup console interface state."""
+        self.io = get_terminal_handler()
+
         # Determine log level
         if user_args.quiet:
             level = "WARNING"
@@ -31,7 +34,7 @@ class ConsulInterface:
             level = "INFO"
 
         logger.remove()
-        logger.add(TerminalHandler.display_loguru_message, level=level, format="{message}")
+        logger.add(self.io.display_loguru_message, level=level, format="{message}")
 
         # setup variables
         self.user_args = user_args
@@ -42,8 +45,8 @@ class ConsulInterface:
         self.session = FlowSession(self.user_args.flow)
 
         # Welcome message
-        TerminalHandler.echo_intro([key.value for key in self.session.available_flows])
-        TerminalHandler.display_message(f"Starting {self.session.str_flow_info}")
+        self.io.echo_intro([key.value for key in self.session.available_flows])
+        self.io.display_message(f"Starting {self.session.str_flow_info}")
 
         # start main loop
         try:
@@ -60,17 +63,17 @@ class ConsulInterface:
 
         # cleanup
         finally:
-            TerminalHandler.echo_goodbye()
-            TerminalHandler.stop_spinner()
+            self.io.echo_goodbye()
+            self.io.stop_spinner()
 
     def _main_loop(self) -> None:
         while True:
             # Get user input
             try:
                 if not self.user_args.message:
-                    user_input = TerminalHandler.prompt_user_input()
+                    user_input = self.io.prompt_user_input()
                 else:
-                    TerminalHandler.display_message(f"User: {self.user_args.message}")
+                    self.io.display_message(f"User: {self.user_args.message}")
                     user_input = self.user_args.message
                     self.user_args.message = ""  # reset message to avoid infinite loop
             except click.Abort:
@@ -80,23 +83,23 @@ class ConsulInterface:
             # Check for command
             if user_input.lower().strip().startswith("/"):
                 system_reply = self._handle_user_command(user_input.lower().strip())
-                TerminalHandler.display_message(f"Command:{system_reply}")
+                self.io.display_message(f"Command:{system_reply}")
                 continue
 
             # Skip empty inputs
             if not user_input.strip():
-                TerminalHandler.display_message("Command:Please enter a message")
+                self.io.display_message("Command:Please enter a message")
                 continue
 
             # Run the flow
-            TerminalHandler.start_spinner()
+            self.io.start_spinner()
 
             # post user message
             response = self.session.post_message(user_input)
 
             # Display response
-            TerminalHandler.stop_spinner()
-            TerminalHandler.display_message(f"Assistant:{response}", format_markdown=True)
+            self.io.stop_spinner()
+            self.io.display_message(f"Assistant:{response}", format_markdown=True)
 
     def _handle_user_command(self, command: str) -> str:
         """Private method for handling user commands starting with '/' character."""
@@ -121,7 +124,7 @@ class ConsulInterface:
                 run_this_flow = AvailableFlow("chat")
             finally:
                 self.session.change_flow(run_this_flow)
-                TerminalHandler.display_message(f"Starting {self.session.str_flow_info}")
+                self.io.display_message(f"Starting {self.session.str_flow_info}")
             return f"Flow changed to {self.session.flow.config.name}."
 
         # save data to markdown
