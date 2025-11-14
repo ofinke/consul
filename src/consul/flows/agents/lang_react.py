@@ -13,6 +13,9 @@ from consul.flows.logging import InterfaceMiddleware
 if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
 
+# TODO Move the interface middleware here and rename it to ReactMiddleware. Also include the state. Update Agents to
+# work with the create_agent framework.
+
 
 class LangReactFlow(BaseFlow):
     """
