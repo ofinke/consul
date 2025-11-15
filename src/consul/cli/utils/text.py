@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
 from rich.spinner import Spinner
+from rich.table import Table, box
 from rich.text import Text
 from rich.traceback import Traceback
 
@@ -235,12 +236,33 @@ class TerminalHandler:
             if spinner_was_running:
                 self.start_spinner()
 
+    def display_table(
+        self, cols: tuple[str], rows: list[tuple[str]], cap: str | None = None, tit: str | None = None
+    ) -> None:
+        """Prints data in unified table design, all data prep needs to be done before calling."""
+        # Define table and its styles
+        table = Table(
+            title=tit,
+            caption=cap,
+            box=box.MINIMAL_HEAVY_HEAD,
+            leading=1,
+            header_style=self.cfg_main_color,
+            caption_style=self.cfg_main_color,
+        )
+        # Define columns and rows
+        for col in cols:
+            table.add_column(col)
+        for row in rows:
+            table.add_row(*row)
+        # print
+        self.csl.print(table)
+
     def echo_intro(self, flows: list[str]) -> None:
         """Display introductory text to CLI interface of Consul."""
         # Generate and display logo
         self.csl.print(self._get_logo(), end="")
         # Prepare intro message
-        intro_message = f"Welcome to the Consul CLI! Consul contains set of simple LLM flows and agents for solving small daily problems. Flow can be selected by starting consul with the '--flow' '-f' flag, available flows are: {', '.join(flows)}. Write '/h' or '/help' to print supported commands."  # noqa: E501
+        intro_message = f"Welcome to the Consul CLI! Consul contains set of simple LLM flows and agents for solving small daily problems. Flow can be selected by starting consul with the '--flow' '-f' flag, available flows are: {', '.join(flows)}.\nWrite '/h' or '/help' to print supported commands."  # noqa: E501
         self.csl.print(self._apply_smart_text_wrap(intro_message), style=self.cfg_main_color)
         self.csl.print("-" * self.cfg_max_width, style=self.cfg_main_color)
 
