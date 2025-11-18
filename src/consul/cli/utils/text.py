@@ -34,13 +34,18 @@ class TerminalHandler:
     cfg_spinner_msg: str = "Consulting artificial neurons..."
     cfg_spinner_style: str = "arrow"
     cfg_code_theme: str = "lightbulb"
-    cfg_log_color_map: ClassVar[dict[str, str]] = {
+    cfg_log_cmap: ClassVar[dict[str, str]] = {
         "DEBUG": "blue",
         "INFO": "white",
         "SUCCESS": "green",
         "WARNING": "yellow",
         "ERROR": "red",
         "CRITICAL": "red",
+    }
+    cfg_cmd_ccmap: ClassVar[dict[str, str]] = {
+        "Assistant": "green",
+        "User": "blue",
+        "Command": "red",
     }
 
     def __init__(self) -> None:
@@ -173,7 +178,7 @@ class TerminalHandler:
             if not self.cfg_use_colors:
                 return Text(f"→ [{level}] {record['time'].strftime('%H:%M:%S ')} {message_text}")
 
-            color = self.cfg_log_color_map.get(level, "white")
+            color = self.cfg_log_cmap.get(level, "white")
 
             formatted = Text()
             formatted.append("→ ", style="white")
@@ -197,6 +202,9 @@ class TerminalHandler:
 
     def display_message(self, message: str, *, format_markdown: bool = False) -> None:
         """Echo formatted message into terminal."""
+        # TODO: Change command to print in a similar fashion as loguru message, inline
+        # → [COMMAND] ?time? - message
+        # TODO: Play with the newlines, so they are printed at the end of each message?
 
         def extract_and_color_prefix(text: str) -> tuple[Text | None, str]:
             """Extract prefix and return colored prefix + remaining text."""

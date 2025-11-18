@@ -17,6 +17,11 @@ from consul.flows.session import FlowSession
 class DatabaseCommandProcessor:
     """Class holding Command operations related to database."""
 
+    # TODO: Update _get_history_db_data when archive is implemented in the history table.
+    # Will probably want to show ID, First message / Summary, Flow, Archive flag, ?metadata?
+
+    # TODO: Implement arg into db_view (a, archive) which prints only latest messages with archive falg True
+
     def __init__(self, session: FlowSession) -> None:
         self.load: int = 10
         self.view: int = 10
@@ -41,6 +46,7 @@ class DatabaseCommandProcessor:
         data = self.db.load(MessageLogTable, statement=statement)
 
         # Convert data for better readability
+
         lim = 300
         udata = [
             (str(row[0]), f"...{row[1][-13:]}", f"{row[2][:lim]}{'...' if len(row[2]) > lim else ''}", row[3])
@@ -119,7 +125,7 @@ class DatabaseCommandProcessor:
                 new_history.append(HumanMessage(content=row[3]))
                 self.io.display_message(f"User:{row[3]}")
             if row[1] == "ai":
-                new_history.append(AIMessage(content=row[3], tool_calls=row[4]))
+                new_history.append(AIMessage(content=row[3], tool_calls=row[4] if row[4] else []))
                 self.io.display_message(f"Assistant:{row[3]}", format_markdown=True) if row[3] else None
             if row[1] == "tool":
                 new_history.append(ToolMessage(content=row[3], tool_call_id="unknown_id"))
@@ -156,7 +162,6 @@ class CommandProcessor:
         # History manipulation
         self.register_command("r", self.cmd_clear, desc="Clear session history")
         self.register_command("f", self.cmd_flow, desc="Change used flow")
-
         # self.register_command("a", self.cmd_archive, desc="Archive current conversation with optional metadata")
         self.register_command("l", self.cmd_db.db_load, desc="Load conversation using ID")
         self.register_command("b", self.cmd_back, desc="Remove last N turns")
@@ -183,6 +188,7 @@ class CommandProcessor:
 
     def cmd_help(self, _: list[str]) -> None:
         """Prints all available commands and their definition."""
+        # TODO: make this pretty and organized, under tags
         cmds = "\n".join(f"/{cmd} - {meta['help']}" for cmd, meta in self.commands.items())
         self.io.display_message(cmds)
 

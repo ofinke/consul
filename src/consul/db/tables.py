@@ -12,6 +12,9 @@ class BaseTable(SQLModel, table=False):
     All database tables in consul should inherit this model.
     """
 
+    # TODO: Think about the ID options as I'm using the ID to retrieve data, is there some equivalent which allows me
+    # to store more data for example in 4 signs? some hexadecimal or other? Goal is to have as much row with ids < 5
+    # letters
     id: int | None = Field(
         default=None,
         primary_key=True,
@@ -90,6 +93,8 @@ class FlowConfigTable(BaseTable, table=False):
 class ArchiveTable(BaseTable, table=False):
     """Prep for table focusing on archiving conversations."""
 
+    # TODO: Move these values into a log_message table and make them nullable. Archive will be just flags in the table
+    # with additional columns
     __tablename__ = "conversation_archive"
 
     cid: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Conversation ID"})
