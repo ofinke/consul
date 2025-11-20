@@ -23,6 +23,11 @@ class LLMParameters(BaseModel):
     temperature: float = 0
     max_tokens: int = 512
     timeout: int = 30
+    # TODO: Implement reasoning effort reasonably. When reasoning effort is set to anything, the message structure
+    # changes. The AIMessage content changes to list of data instead of a pure string. message.text exists, but
+    # it dissapears if we are dumping the message, which we do before logging. Maybe more unknown issues arise. When
+    # running this parameter with unsupported model, the request fails completely
+    # reasoning: dict = {"effort": "low"}
 
 
 class AgentParameters(BaseModel):

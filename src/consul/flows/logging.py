@@ -22,11 +22,14 @@ class LoggingHandler:
     def _extract_message_info(self, message: dict[str, Any] | HumanMessage | AIMessage | ToolMessage) -> dict[str, Any]:
         """Convert response message into a format usable in the MessageLogTable."""
         # First, try to dump message into a dictionary.
-        if not isinstance(message, dict):
+        # TODO: This is messy as None and "" have different meaning in text variable.
+        text = None
+        if isinstance(message, (HumanMessage, AIMessage, ToolMessage)):
+            text = message.text
             message = message.model_dump()
         return {
             "author": message.get("type", self.emsg),
-            "message": message.get("content", self.emsg),
+            "message": text if text is not None else message.get("content", self.emsg),
             "tool_call": message.get("tool_calls"),
             "llm": message.get("response_metadata", {}).get("model_name"),
             "usage_metadata": message.get("usage_metadata"),

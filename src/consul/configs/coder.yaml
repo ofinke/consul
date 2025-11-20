@@ -10,7 +10,7 @@ tags:
   - "agent"
 
 # llm configuration
-llm_name: "gpt-5-chat"
+llm_name: "gpt-5-chat" # "gpt-5.1-codex"
 llm_params: 
   temperature: 0
   max_tokens: 16384

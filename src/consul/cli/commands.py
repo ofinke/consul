@@ -5,8 +5,8 @@ from loguru import logger
 from sqlalchemy import func, select
 
 from consul.cli.exceptions import CommandInterrupt
+from consul.cli.terminal import get_terminal_handler
 from consul.cli.utils.save import save_memory
-from consul.cli.utils.text import get_terminal_handler
 from consul.core.config.flows import AvailableFlow
 from consul.db.handler import get_db_handler
 from consul.db.tables import MessageLogTable
@@ -58,8 +58,8 @@ class DatabaseCommandProcessor:
         """Show latest 10 rows from the database view."""
         self.load = 10
         self.latest_table: str = "h"
-        caption = "Latest 10 conversations stored in the history database. Showing first user message."
-        self.io.display_table(self.cfg_history_cols, self._get_history_db_data(), cap=caption)
+        self.io.display_table(self.cfg_history_cols, self._get_history_db_data())
+        self.io.display_message(f"Command: Showing last {self.view} from {self.load} latest conversations.")
 
     # def cmd_arch_view(self, _: list[str]) -> None:
     #     """Show latest messages from archive."""
@@ -67,32 +67,32 @@ class DatabaseCommandProcessor:
     def db_down(self, args: list[str]) -> None:
         """Scroll down the database history."""
         self.load += int(args[0]) if args else 10
-        caption = "TBD."
-        self.io.display_table(self.cfg_history_cols, self._get_history_db_data(), cap=caption)
+        self.io.display_table(self.cfg_history_cols, self._get_history_db_data())
+        self.io.display_message(f"Command: Showing last {self.view} from {self.load} latest conversations.")
 
     def db_up(self, _: list[str]) -> None:
         """Scroll down the database history."""
         self.load = max(self.load - 10, 10)
-        caption = "TBD."
-        self.io.display_table(self.cfg_history_cols, self._get_history_db_data(), cap=caption)
+        self.io.display_table(self.cfg_history_cols, self._get_history_db_data())
+        self.io.display_message(f"Command: Showing last {self.view} from {self.load} latest conversations.")
 
     def db_load(self, args: list[str]) -> None:
         """Loads conversation from history from database."""
         if not args:
-            self.io.display_message("Command:Please provide a message ID.")
+            self.io.display_message("Command: Please provide a message ID.")
             return
 
         try:
             message_id = int(args[0])
         except ValueError:
-            self.io.display_message("Command:Invalid ID format. Must be an integer.")
+            self.io.display_message("Command: Invalid ID format. Must be an integer.")
             return
 
         # First, get the cid for the given message ID
         cid_stmt = select(MessageLogTable.cid).where(MessageLogTable.id == message_id)
         cid_result = self.db.load(MessageLogTable, statement=cid_stmt)
         if not cid_result:
-            self.io.display_message(f"Command:No conversation found for ID {message_id}.")
+            self.io.display_message(f"Command: No conversation found for ID {message_id}.")
             return
 
         cid = cid_result[0][0]
@@ -123,12 +123,14 @@ class DatabaseCommandProcessor:
         for row in conversation_data:
             if row[1] == "human":
                 new_history.append(HumanMessage(content=row[3]))
-                self.io.display_message(f"User:{row[3]}")
+                self.io.display_message(f"User: {row[3]}")
             if row[1] == "ai":
                 new_history.append(AIMessage(content=row[3], tool_calls=row[4] if row[4] else []))
-                self.io.display_message(f"Assistant:{row[3]}", format_markdown=True) if row[3] else None
+                self.io.display_message(f"Assistant: {row[3]}") if row[3] else None
             if row[1] == "tool":
                 new_history.append(ToolMessage(content=row[3], tool_call_id="unknown_id"))
+
+        self.io.display_message(f"Command: Loaded conversation with ID {message_id}")
 
 
 class CommandProcessor:
@@ -158,7 +160,11 @@ class CommandProcessor:
             desc="Show list of commands",
         )
         self.register_command("q", self.cmd_exit, aliases=["quit"], desc="Exit the application")
-        self.register_command("s", self.cmd_save, desc="Save conversation history to markdown")
+        self.register_command(
+            "p",
+            self.cmd_print,
+            desc="Print current conversation history to markdown, or specific using ID.",
+        )
         # History manipulation
         self.register_command("r", self.cmd_clear, desc="Clear session history")
         self.register_command("f", self.cmd_flow, desc="Change used flow")
@@ -182,7 +188,7 @@ class CommandProcessor:
             if cmd in self.commands:
                 self.commands[cmd]["handler"](args)
             else:
-                self.io.display_message(f"Unknown command: {cmd}")
+                self.io.display_message(f"Command: Unknown command '{cmd}'")
 
     # COMMANDS
 
@@ -199,7 +205,7 @@ class CommandProcessor:
     def cmd_clear(self, _: list[str]) -> None:
         """Clears current session history."""
         self.session.clear_history()
-        self.io.display_message("Command:Memory cleared!")
+        self.io.display_message("Command: Session chat history cleared!")
 
     def cmd_flow(self, args: list[str]) -> None:
         """Changes session flow while keeping history."""
@@ -211,13 +217,12 @@ class CommandProcessor:
             run_this_flow = AvailableFlow("chat")
         finally:
             self.session.change_flow(run_this_flow)
-            self.io.display_message(f"Starting {self.session.str_flow_info}")
-            self.io.display_message(f"Command:Flow changed to {self.session.flow.config.name}.")
+            self.io.display_message(f"Command: Starting {self.session.str_flow_info}")
 
-    def cmd_save(self, _: list[str]) -> None:
+    def cmd_print(self, _: list[str]) -> None:
         """Save current history into a markdown file."""
         path_to_saved_file = save_memory(self.session.chat_history, self.session.flow.config.name)
-        self.io.display_message(f"Command:Conversation history saved at '{path_to_saved_file}'.")
+        self.io.display_message(f"Command: Conversation history saved at '{path_to_saved_file}'.")
 
     def cmd_back(self, args: list[str]) -> None:
         """Removes N turns from conversation (turn = everything from latest human message)."""
@@ -246,14 +251,14 @@ class CommandProcessor:
         log_handler = LoggingHandler()
         for msg in new_history:
             if isinstance(msg, HumanMessage):
-                self.io.display_message(f"User:{msg.content}")
+                self.io.display_message(f"User:{msg.text}")
             if isinstance(msg, AIMessage):
-                self.io.display_message(f"Assistant:{msg.content}", format_markdown=True)
+                self.io.display_message(f"Assistant:{msg.text}", format_markdown=True)
             fake_state["messages"].append(msg)
             log_handler.log_message(fake_state)
 
         # Inform user
-        self.io.display_message(f"Command:Removed last {steps} turn(s) and created new conversation history.")
+        self.io.display_message(f"Command: Removed last {steps} turn(s) and created new conversation history.")
 
     # def cmd_archive(self, args):
     #     metadata = self._parse_metadata(args)

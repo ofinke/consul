@@ -1,10 +1,10 @@
 import click
 from loguru import logger
 
+from consul.cli.commands import CommandProcessor
 from consul.cli.exceptions import CommandInterrupt
-from consul.cli.utils.commands import CommandProcessor
-from consul.cli.utils.text import TerminalHandler, get_terminal_handler
-from consul.cli.utils.user_args import UserArgs, consul_user_args
+from consul.cli.terminal import TerminalHandler, get_terminal_handler
+from consul.cli.utils.appargs import UserArgs, consul_user_args
 from consul.flows.session import FlowSession
 
 
@@ -38,7 +38,7 @@ class ConsulInterface:
     def start_interface(self) -> None:
         # Welcome message
         self.io.echo_intro([key.value for key in self.session.available_flows])
-        self.io.display_message(f"Starting {self.session.str_flow_info}")
+        self.io.display_message(f"Command: Starting {self.session.str_flow_info}")
 
         # start main loop
         try:
@@ -79,7 +79,7 @@ class ConsulInterface:
 
             # Skip empty inputs
             if not user_input.strip():
-                self.io.display_message("Command:Please enter a message")
+                self.io.display_message("Command: Please enter a message")
                 continue
 
             # Run the flow
@@ -90,7 +90,7 @@ class ConsulInterface:
 
             # Display response
             self.io.stop_spinner()
-            self.io.display_message(f"Assistant:{response}", format_markdown=True)
+            self.io.display_message(f"Assistant: {response}")
 
 
 @consul_user_args

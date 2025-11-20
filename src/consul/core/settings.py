@@ -24,7 +24,7 @@ class AzureCredentials(GeneralCredentials):
     """Azure hosted models."""
 
     base_url: str = Field(serialization_alias="azure_endpoint")
-    api_version: str = "2024-05-01-preview"
+    api_version: str = "2025-03-01-preview"
 
 
 class Settings(BaseSettings):

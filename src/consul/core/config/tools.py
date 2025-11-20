@@ -6,6 +6,8 @@ from consul.tools.propose_code import propose_code_edit, propose_new_code
 from consul.tools.retrieve_code import get_source_code
 from consul.tools.tests import run_pytest
 
+# TODO: Redo this as MCP, Maybe move it in consul.tools.registry
+
 
 class AvailableTools(Enum):
     SAVE_TO_FILE = "save_to_file"

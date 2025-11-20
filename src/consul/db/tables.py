@@ -14,7 +14,7 @@ class BaseTable(SQLModel, table=False):
 
     # TODO: Think about the ID options as I'm using the ID to retrieve data, is there some equivalent which allows me
     # to store more data for example in 4 signs? some hexadecimal or other? Goal is to have as much row with ids < 5
-    # letters
+    # letters. Use the the ID 183 conversation from my work DB by writing base36encode, decode utils
     id: int | None = Field(
         default=None,
         primary_key=True,
@@ -47,9 +47,24 @@ class MessageLogTable(BaseTable, table=True):
     __tablename__ = "log_messages"
 
     # Identificators
-    cid: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Conversation ID"})
-    flow: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Flow name"})
-    author: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Message author"})
+    cid: str = Field(
+        max_length=64,
+        nullable=False,
+        index=True,
+        sa_column_kwargs={"comment": "Conversation ID"},
+    )
+    flow: str = Field(
+        max_length=64,
+        nullable=False,
+        index=True,
+        sa_column_kwargs={"comment": "Flow name"},
+    )
+    author: str = Field(
+        max_length=64,
+        nullable=False,
+        index=True,
+        sa_column_kwargs={"comment": "Message author"},
+    )
     # Values
     message: str = Field(
         sa_type=Text,
@@ -73,6 +88,18 @@ class MessageLogTable(BaseTable, table=True):
         sa_type=JSON,
         sa_column_kwargs={"comment": "Usage metadata"},
     )
+    # # Archive keys
+    # summary: str = Field(
+    #     max_length=800,
+    #     nullable=True,
+    #     sa_column_kwargs={"comment": "LLM based summary for archived conversations"},
+    # )
+    # custom_metadata: dict[str, Any] = Field(
+    #     default_factory=dict,
+    #     nullable=True,
+    #     sa_type=JSON,
+    #     sa_column_kwargs={"comment": "Custom metadata stored for archived conversations"},
+    # )
 
 
 class FlowConfigTable(BaseTable, table=False):

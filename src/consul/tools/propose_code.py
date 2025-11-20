@@ -9,7 +9,7 @@ from langchain_core.tools import tool
 from loguru import logger
 from unidiff import PatchSet
 
-from consul.cli.utils.text import TerminalHandler
+from consul.cli.terminal import TerminalHandler
 
 
 def _ensure_temp_dir() -> Path:

@@ -6,9 +6,9 @@ from loguru import logger
 
 from consul.cli.utils.callback import interface_callback
 from consul.core.config.flows import AvailableFlow
-from consul.flows.agents.lang_react import LangReactFlow
 from consul.flows.base import BaseFlow
-from consul.flows.tasks.chat import ChatTask
+from consul.flows.chat import ChatTask
+from consul.flows.lang_react import LangReactFlow
 
 
 class FlowSession:
@@ -53,7 +53,7 @@ class FlowSession:
         self.flow = self.available_flows[flow]
 
     def post_message(self, message: str) -> str:
-        """Call flow with full history and new user message."""
+        """Call flow with full history and new user message and returns the AI answer."""
         # convert message in desired format
         user_message = HumanMessage(content=message)
         self.chat_history.append(user_message)
@@ -72,4 +72,4 @@ class FlowSession:
         # Store response in history and return model answer
         new_history_part = result.messages[len(self.chat_history) :]
         self.chat_history.extend(new_history_part)
-        return result.messages[-1].content
+        return result.messages[-1].text

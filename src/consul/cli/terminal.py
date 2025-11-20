@@ -1,6 +1,7 @@
 import functools
 import re
 import textwrap
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from prompt_toolkit import prompt
@@ -27,7 +28,7 @@ class TerminalHandler:
     live_spinner: Live | None = None
     spinner: Spinner | None = None
     # config
-    cfg_main_color: str = "cyan"
+    cfg_main_color: str = "cyan"  # cyan / yellow
     cfg_use_colors: bool = True
     cfg_max_width: int = 120
     cfg_min_width: int = 66
@@ -42,10 +43,10 @@ class TerminalHandler:
         "ERROR": "red",
         "CRITICAL": "red",
     }
-    cfg_cmd_ccmap: ClassVar[dict[str, str]] = {
-        "Assistant": "green",
-        "User": "blue",
-        "Command": "red",
+    cfg_cmd_cmap: ClassVar[dict[str, str]] = {
+        "assistant:": "green",
+        "user:": "blue",
+        "command:": cfg_main_color,
     }
 
     def __init__(self) -> None:
@@ -181,7 +182,6 @@ class TerminalHandler:
             color = self.cfg_log_cmap.get(level, "white")
 
             formatted = Text()
-            formatted.append("→ ", style="white")
             formatted.append(f"[{level}] ", style=color)
             formatted.append(record["time"].strftime("%H:%M:%S "), style="white")
             formatted.append(message_text, style=color)
@@ -200,46 +200,54 @@ class TerminalHandler:
         else:
             emit_message(record, formatted_text)
 
-    def display_message(self, message: str, *, format_markdown: bool = False) -> None:
-        """Echo formatted message into terminal."""
-        # TODO: Change command to print in a similar fashion as loguru message, inline
-        # → [COMMAND] ?time? - message
-        # TODO: Play with the newlines, so they are printed at the end of each message?
+    def display_message(self, message: str) -> None:
+        """
+        Echo formatted message into terminal.
+        Use predefined printing format for messages by starting the message with one of the prefixes: 'user:' or
+        'assistant:' for messages meant for conversation with AI, or 'command:' prefix to print system answers to user
+        commands. When no prefix is used, the message is printed as it is.
+        """
 
-        def extract_and_color_prefix(text: str) -> tuple[Text | None, str]:
-            """Extract prefix and return colored prefix + remaining text."""
-            prefixes_colors = {"User:": "blue", "Assistant:": "green", "Command:": "red"}
+        def display_conversation_message(text: str, prefix: str) -> None:
+            """Unified function to print messages with 'user:' or 'assistant:' prefixes."""
+            # Define the full message we want to print from a newline and wrap it
+            wtext = self._apply_smart_text_wrap(f"→ {text[len(prefix) :].lstrip()}")
+            self.csl.print("\n", end="")
+            self.csl.print(Text(prefix.capitalize(), style=self.cfg_cmd_cmap.get(prefix, "white")))
+            self.csl.print(Markdown(wtext, code_theme=self.cfg_code_theme))
 
-            for prefix, color in prefixes_colors.items():
-                if text.startswith(prefix):
-                    colored_prefix = Text(prefix, style=color) + Text("\n→ ", style="white")
-                    remaining_text = text[len(prefix) :]
-                    return colored_prefix, remaining_text
-
-            return None, text
-
-        # Always apply text wrap first
-        message = self._apply_smart_text_wrap(message)
-
-        # Extract and color prefix, get remaining content
-        colored_prefix, content = extract_and_color_prefix(message)
+        def display_command_message(txt: str, prefix: str) -> None:
+            """Unified function to print messages with 'command:' prefix."""
+            self.csl.print("\n", end="")
+            cl = self.cfg_cmd_cmap.get(prefix, "white")
+            # Construct the raw message and wrap it:
+            dt = datetime.now(UTC).strftime(" %H:%M:%S ")
+            prefix = f"[{prefix[:-1].capitalize()}]"
+            msg = f"{prefix} {dt} {txt[len(prefix) :].lstrip()}"
+            wmsg = self._apply_smart_text_wrap(msg)
+            # Now, we recreate the message with styles with correct wrap.
+            wsmsg = (
+                Text(prefix, style=cl)
+                + Text(dt, style="white")
+                + Text(wmsg[len(prefix) + len(dt) + 2 :].lstrip(), style=cl)
+            )
+            self.csl.print(wsmsg)
 
         # Stop spinner temporarily if running
         spinner_was_running = self.live_spinner and self.live_spinner.is_started
         if spinner_was_running:
             self.stop_spinner()
 
+        # Print the message according to prefix.
+        prefix = next((p for p in self.cfg_cmd_cmap if message.lower().startswith(p)), None)
         try:
-            self.csl.print("\n", end="")
-            # Print colored prefix if it exists
-            if colored_prefix:
-                self.csl.print(colored_prefix, end="")
-            # Print content (either as markdown or plain text)
-            if format_markdown:
-                self.csl.print(Markdown(content, code_theme=self.cfg_code_theme))
+            if prefix in ["user:", "assistant:"]:
+                display_conversation_message(message, prefix)
+            elif prefix == "command:":
+                display_command_message(message, prefix)
             else:
-                self.csl.print(content)
-
+                self.csl.print("\n", end="")
+                self.csl.print(Markdown(self._apply_smart_text_wrap(message), code_theme=self.cfg_code_theme))
         finally:
             if spinner_was_running:
                 self.start_spinner()

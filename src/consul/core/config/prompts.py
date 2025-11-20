@@ -4,6 +4,10 @@ from pathlib import Path
 PROMPT_FORMAT_MAPPING = {}
 
 
+# TODO: Redo this as a Registry class which registers the prompts functions with cleaner approach than this
+# plugin discovery Maybe move it in consul.prompts.registry
+
+
 def autodiscover_plugins() -> None:
     """Auto-import plugin modules in the consul.prompts."""
     current_file = Path(__file__)

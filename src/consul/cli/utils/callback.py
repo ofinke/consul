@@ -1,6 +1,6 @@
 from langchain.messages import AIMessage
 
-from consul.cli.utils.text import get_terminal_handler
+from consul.cli.terminal import get_terminal_handler
 
 
 def interface_callback(*args: tuple, **kwargs: dict) -> None:  # noqa: ARG001
@@ -22,8 +22,8 @@ def interface_callback(*args: tuple, **kwargs: dict) -> None:  # noqa: ARG001
 
     # If the AI wrote something and also called tools. print it
     calls = lmsg.tool_calls
-    if calls and lmsg.content:
-        io.display_message(f"Assistant:{lmsg.content}", format_markdown=True)
+    if calls and lmsg.text:
+        io.display_message(f"Assistant: {lmsg.text}")
 
     # If calls are present, show the updated spinner message
     if calls:

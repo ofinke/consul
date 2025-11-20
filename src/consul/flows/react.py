@@ -90,7 +90,7 @@ class ReactAgentFlow(BaseFlow):
                         tool_call_id=tool_call["id"],
                     )
                 )
-                logger.success(f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].content[:25]!r}...'")
+                logger.success(f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].text[:25]!r}...'")
             return self.state_schema(messages=[*state.messages, *tool_outputs], **state.model_dump(exclude="messages"))
 
         def should_continue(state: BaseGraphState) -> str:
