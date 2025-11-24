@@ -105,6 +105,7 @@ class DatabaseCommandProcessor:
                 MessageLogTable.flow,
                 MessageLogTable.message,
                 MessageLogTable.tool_call,
+                MessageLogTable.tool_call_id,
             )
             .where(MessageLogTable.cid == cid)
             .order_by(MessageLogTable.created_at.asc())
@@ -128,7 +129,8 @@ class DatabaseCommandProcessor:
                 new_history.append(AIMessage(content=row[3], tool_calls=row[4] if row[4] else []))
                 self.io.display_message(f"Assistant: {row[3]}") if row[3] else None
             if row[1] == "tool":
-                new_history.append(ToolMessage(content=row[3], tool_call_id="unknown_id"))
+                new_history.append(ToolMessage(content=row[3], tool_call_id=row[5]))
+        self.session.chat_history = new_history
 
         self.io.display_message(f"Command: Loaded conversation with ID {message_id}")
 
@@ -251,9 +253,9 @@ class CommandProcessor:
         log_handler = LoggingHandler()
         for msg in new_history:
             if isinstance(msg, HumanMessage):
-                self.io.display_message(f"User:{msg.text}")
+                self.io.display_message(f"User: {msg.text}")
             if isinstance(msg, AIMessage):
-                self.io.display_message(f"Assistant:{msg.text}", format_markdown=True)
+                self.io.display_message(f"Assistant: {msg.text}")
             fake_state["messages"].append(msg)
             log_handler.log_message(fake_state)
 

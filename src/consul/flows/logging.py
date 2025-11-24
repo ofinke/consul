@@ -22,15 +22,18 @@ class LoggingHandler:
     def _extract_message_info(self, message: dict[str, Any] | HumanMessage | AIMessage | ToolMessage) -> dict[str, Any]:
         """Convert response message into a format usable in the MessageLogTable."""
         # First, try to dump message into a dictionary.
-        # TODO: This is messy as None and "" have different meaning in text variable.
+        # TODO: This is messy as None and "" have different meaning in text variable. Change logging to store the
+        # content blocks directly instead? But note that content_blocks work only for langgraphs Message class.
         text = None
         if isinstance(message, (HumanMessage, AIMessage, ToolMessage)):
+
             text = message.text
             message = message.model_dump()
         return {
             "author": message.get("type", self.emsg),
             "message": text if text is not None else message.get("content", self.emsg),
             "tool_call": message.get("tool_calls"),
+            "tool_call_id": message.get("tool_call_id"),
             "llm": message.get("response_metadata", {}).get("model_name"),
             "usage_metadata": message.get("usage_metadata"),
         }

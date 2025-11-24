@@ -77,6 +77,11 @@ class MessageLogTable(BaseTable, table=True):
         sa_type=JSON,
         sa_column_kwargs={"comment": "Tool calls invoked"},
     )
+    tool_call_id: str = Field(
+        max_length=64,
+        nullable=True,
+        sa_column_kwargs={"comment": "Tool call ID connected to Tool Message"},
+    )
     llm: str = Field(
         max_length=64,
         nullable=True,
@@ -88,47 +93,30 @@ class MessageLogTable(BaseTable, table=True):
         sa_type=JSON,
         sa_column_kwargs={"comment": "Usage metadata"},
     )
-    # # Archive keys
-    # summary: str = Field(
-    #     max_length=800,
-    #     nullable=True,
-    #     sa_column_kwargs={"comment": "LLM based summary for archived conversations"},
-    # )
-    # custom_metadata: dict[str, Any] = Field(
-    #     default_factory=dict,
-    #     nullable=True,
-    #     sa_type=JSON,
-    #     sa_column_kwargs={"comment": "Custom metadata stored for archived conversations"},
-    # )
+    # Archive keys
+    summary: str = Field(
+        sa_type=Text,
+        nullable=True,
+        sa_column_kwargs={"comment": "LLM based summary for archived conversations"},
+    )
+    custom_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        nullable=True,
+        sa_type=JSON,
+        sa_column_kwargs={"comment": "Custom metadata stored for archived conversations"},
+    )
 
 
-class FlowConfigTable(BaseTable, table=False):
-    """Preparation for implementing flows definitions into database."""
+# class FlowConfigTable(BaseTable, table=False):
+#     """Preparation for implementing flows definitions into database."""
 
-    __tablename__ = "flow_configs"
+#     __tablename__ = "flow_configs"
 
-    # LLM definition
-    llm_name: str
-    llm_params: dict[str, Any]
+#     # LLM definition
+#     llm_name: str
+#     llm_params: dict[str, Any]
 
-    # tools definition
-    tools: None
+#     # tools definition
+#     tools: None
 
-    # prompt
-
-
-class ArchiveTable(BaseTable, table=False):
-    """Prep for table focusing on archiving conversations."""
-
-    # TODO: Move these values into a log_message table and make them nullable. Archive will be just flags in the table
-    # with additional columns
-    __tablename__ = "conversation_archive"
-
-    cid: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Conversation ID"})
-    flow: str = Field(max_length=64, nullable=False, index=True, sa_column_kwargs={"comment": "Flow name"})
-
-    # if conversation is related to certain flow/agent and this agent wants to include some special metadata,
-    # for example coding agent want to store to which feature in which project, the conversation is related to.
-    conversation_metadata: dict
-
-    summary: str | None
+#     # prompt
