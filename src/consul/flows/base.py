@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
+from itertools import chain
+from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, ChatMessage
@@ -28,6 +30,12 @@ class BaseGraphState(BaseModel):
     callback: Callable | None = None
     # message history
     messages: Sequence[BaseMessage]
+
+    def shallow_dump(self) -> dict[str, Any]:
+        """Shallow dump into a dictionary without dumping nested pydantic model."""
+        cls = self.__class__
+        keys = chain(cls.model_fields.keys(), cls.model_computed_fields.keys())
+        return {k: getattr(self, k) for k in keys}
 
 
 class BaseFlow(ABC):

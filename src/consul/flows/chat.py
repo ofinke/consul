@@ -36,12 +36,10 @@ class ChatTask(BaseFlow):
         def llm_node(state: BaseGraphState) -> BaseGraphState:
             """Logs user message, calls LLM, logs LLM answer, and appends LLM response to chat history."""
             full_history = [*self._system_prompt, *state.messages]
-            self.logging.log_message(
-                self.state_schema(messages=full_history, **state.model_dump(exclude="messages")).model_dump()
-            )
+            self.logging.log_message(self.state_schema(messages=full_history, **state.model_dump(exclude="messages")))
             response = self._llm.invoke(full_history)
             new_state = self.state_schema(messages=[*state.messages, response], **state.model_dump(exclude="messages"))
-            self.logging.log_message(new_state.model_dump())
+            self.logging.log_message(new_state)
             return new_state
 
         graph.add_node("llm_call", llm_node)

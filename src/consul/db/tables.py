@@ -66,16 +66,11 @@ class MessageLogTable(BaseTable, table=True):
         sa_column_kwargs={"comment": "Message author"},
     )
     # Values
-    message: str = Field(
-        sa_type=Text,
+    content_blocks: dict[str, Any] = Field(
+        default_factory=dict,
         nullable=False,
-        sa_column_kwargs={"comment": "Message content"},
-    )
-    tool_call: list[dict[str, Any]] = Field(
-        default_factory=list,
-        nullable=True,
         sa_type=JSON,
-        sa_column_kwargs={"comment": "Tool calls invoked"},
+        sa_column_kwargs={"comment": "Content of the message stores as the langchains content_blocks"},
     )
     tool_call_id: str = Field(
         max_length=64,

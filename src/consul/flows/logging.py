@@ -1,10 +1,12 @@
 from typing import Any
 
-from langchain.agents.middleware import AgentState
 from langchain.messages import AIMessage, HumanMessage, ToolMessage
+from loguru import logger
+from pydantic import BaseModel
 
 from consul.db.handler import get_db_handler
 from consul.db.tables import MessageLogTable
+from consul.flows.base import BaseGraphState
 
 
 class LoggingHandler:
@@ -19,30 +21,33 @@ class LoggingHandler:
         """Usual init + start database handler."""
         self.handler = get_db_handler()
 
-    def _extract_message_info(self, message: dict[str, Any] | HumanMessage | AIMessage | ToolMessage) -> dict[str, Any]:
-        """Convert response message into a format usable in the MessageLogTable."""
-        # First, try to dump message into a dictionary.
-        # TODO: This is messy as None and "" have different meaning in text variable. Change logging to store the
-        # content blocks directly instead? But note that content_blocks work only for langgraphs Message class.
-        text = None
-        if isinstance(message, (HumanMessage, AIMessage, ToolMessage)):
+    def log_message(self, state: dict[str, Any] | type[BaseModel]) -> None:
+        """
+        Log latest message in conversation into database.
+        Supports typed dictionaries which are by default used in langgraph as states or pydantic models used in
+        my custom flow definitions.
+        """
+        # First we have to determine if our message can be logger at all. If state is not dictionary, we do shallow dump
+        # State has to include flow and conversation_id identifiers. Then we also expect, that the message we are
+        # logging is in one of the langchains messages types
+        if isinstance(state, BaseGraphState):
+            state = state.shallow_dump()
+        if "cid" not in state and "flow" not in state:
+            logger.warning("State doesn't include 'cid' and 'flow' values and cannot be logged into DB.")
+            return
+        latest_message = state.get("messages", [])[-1]
+        if not latest_message or not isinstance(latest_message, (HumanMessage, AIMessage, ToolMessage)):
+            logger.warning("Latest message is empty or not in the required format and cannot be logged into DB.")
+            return
 
-            text = message.text
-            message = message.model_dump()
-        return {
-            "author": message.get("type", self.emsg),
-            "message": text if text is not None else message.get("content", self.emsg),
-            "tool_call": message.get("tool_calls"),
-            "tool_call_id": message.get("tool_call_id"),
-            "llm": message.get("response_metadata", {}).get("model_name"),
-            "usage_metadata": message.get("usage_metadata"),
-        }
-
-    def log_message(self, state: dict[str, Any] | AgentState) -> None:
-        """Log latest message in conversation into database."""
+        # Then we log the message
         to_log = MessageLogTable(
-            cid=state.get("cid", self.emsg),
-            flow=state.get("flow", self.emsg),
-            **self._extract_message_info(state.get("messages", [])[-1]),
+            cid=state.get("cid"),
+            flow=state.get("flow"),
+            author=latest_message.type,
+            content_blocks=latest_message.content_blocks,
+            tool_call_id=latest_message.tool_call_id if hasattr(latest_message, "tool_call_id") else None,
+            llm=latest_message.response_metadata.get("model_name"),
+            usage_metadata=latest_message.usage_metadata if hasattr(latest_message, "usage_metadata") else None,
         )
         self.handler.store([to_log])

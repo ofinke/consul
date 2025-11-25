@@ -38,20 +38,26 @@ class DatabaseCommandProcessor:
         # limited to 5.
         subq = select(func.min(MessageLogTable.id).label("min_id")).group_by(MessageLogTable.cid).subquery()
         statement = (
-            select(MessageLogTable.id, MessageLogTable.cid, MessageLogTable.message, MessageLogTable.flow)
+            select(MessageLogTable.id, MessageLogTable.cid, MessageLogTable.content_blocks, MessageLogTable.flow)
             .join(subq, MessageLogTable.id == subq.c.min_id)
             .order_by(MessageLogTable.created_at.desc())
             .limit(self.load)
         )
         data = self.db.load(MessageLogTable, statement=statement)
 
-        # Convert data for better readability
-
+        # Convert data for better readability. Especially the next() call is really lovely lol. It takes first text from
+        # langchains content_blocks and truncate the string according to the desired limit.
         lim = 300
         udata = [
-            (str(row[0]), f"...{row[1][-13:]}", f"{row[2][:lim]}{'...' if len(row[2]) > lim else ''}", row[3])
+            (
+                str(row[0]),
+                f"...{row[1][-13:]}",
+                f"{next((d['text'][:lim] for d in row[2] if d.get('type') == 'text'), '')}{'...' if len(row[2]) > lim else ''}",  # noqa: E501
+                row[3],
+            )
             for row in data
         ]
+
         return udata[-self.view :]
 
     def db_view(self, args: list[str]) -> None:
@@ -103,8 +109,7 @@ class DatabaseCommandProcessor:
                 MessageLogTable.cid,
                 MessageLogTable.author,
                 MessageLogTable.flow,
-                MessageLogTable.message,
-                MessageLogTable.tool_call,
+                MessageLogTable.content_blocks,
                 MessageLogTable.tool_call_id,
             )
             .where(MessageLogTable.cid == cid)
@@ -123,13 +128,13 @@ class DatabaseCommandProcessor:
         new_history = []
         for row in conversation_data:
             if row[1] == "human":
-                new_history.append(HumanMessage(content=row[3]))
-                self.io.display_message(f"User: {row[3]}")
+                new_history.append(HumanMessage(content_blocks=row[3]))
+                self.io.display_message(f"User: {new_history[-1].text}")
             if row[1] == "ai":
-                new_history.append(AIMessage(content=row[3], tool_calls=row[4] if row[4] else []))
-                self.io.display_message(f"Assistant: {row[3]}") if row[3] else None
+                new_history.append(AIMessage(content_blocks=row[3]))
+                self.io.display_message(f"Assistant: {new_history[-1].text}") if new_history[-1].text else None
             if row[1] == "tool":
-                new_history.append(ToolMessage(content=row[3], tool_call_id=row[5]))
+                new_history.append(ToolMessage(content_blocks=row[3], tool_call_id=row[4]))
         self.session.chat_history = new_history
 
         self.io.display_message(f"Command: Loaded conversation with ID {message_id}")
