@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Text
+from sqlalchemy import Boolean, Text
 from sqlalchemy.types import JSON
 from sqlmodel import DateTime, Field, SQLModel, func
 
@@ -89,6 +89,12 @@ class MessageLogTable(BaseTable, table=True):
         sa_column_kwargs={"comment": "Usage metadata"},
     )
     # Archive keys
+    archived: bool = Field(
+        default=False,
+        nullable=False,
+        sa_type=Boolean,
+        sa_column_kwargs={"comment": "Indicate whether the conversation is archived"},
+    )
     summary: str = Field(
         sa_type=Text,
         nullable=True,

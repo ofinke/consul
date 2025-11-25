@@ -264,6 +264,7 @@ class TerminalHandler:
             leading=1,
             header_style=self.cfg_main_color,
             caption_style=self.cfg_main_color,
+            width=self.csl.width
         )
         # Define columns and rows
         for col in cols:

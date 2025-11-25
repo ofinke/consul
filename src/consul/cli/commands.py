@@ -1,4 +1,6 @@
+import string
 from collections.abc import Callable
+from typing import ClassVar
 
 from langchain.messages import AIMessage, HumanMessage, ToolMessage
 from loguru import logger
@@ -21,15 +23,17 @@ class DatabaseCommandProcessor:
     # Will probably want to show ID, First message / Summary, Flow, Archive flag, ?metadata?
 
     # TODO: Implement arg into db_view (a, archive) which prints only latest messages with archive falg True
+    ALPHABET36: ClassVar[str] = string.digits + string.ascii_lowercase
 
     def __init__(self, session: FlowSession) -> None:
+        """Init processor for database commands."""
         self.load: int = 10
         self.view: int = 10
         self.latest_table: str = "h"
         self.session = session
         self.db = get_db_handler()
         self.io = get_terminal_handler()
-        self.cfg_history_cols = ("ID", "Conversation ID", "First user message", "Flow")
+        self.cfg_history_cols = ("ID", "First user message", "Flow", "Archive")
 
     def _get_history_db_data(self) -> list[tuple]:
         """Load 'self.load' data from history and convert them into table printable format."""
@@ -38,7 +42,12 @@ class DatabaseCommandProcessor:
         # limited to 5.
         subq = select(func.min(MessageLogTable.id).label("min_id")).group_by(MessageLogTable.cid).subquery()
         statement = (
-            select(MessageLogTable.id, MessageLogTable.cid, MessageLogTable.content_blocks, MessageLogTable.flow)
+            select(
+                MessageLogTable.id,
+                MessageLogTable.content_blocks,
+                MessageLogTable.flow,
+                MessageLogTable.archived,
+            )
             .join(subq, MessageLogTable.id == subq.c.min_id)
             .order_by(MessageLogTable.created_at.desc())
             .limit(self.load)
@@ -50,10 +59,10 @@ class DatabaseCommandProcessor:
         lim = 300
         udata = [
             (
-                str(row[0]),
-                f"...{row[1][-13:]}",
-                f"{next((d['text'][:lim] for d in row[2] if d.get('type') == 'text'), '')}{'...' if len(row[2]) > lim else ''}",  # noqa: E501
-                row[3],
+                self.encode_base36(row[0]),
+                f"{next((d['text'][:lim] for d in row[1] if d.get('type') == 'text'), '')}{'...' if len(row[2]) > lim else ''}",  # noqa: E501
+                row[2],
+                "O" if row[3] else "X",
             )
             for row in data
         ]
@@ -89,7 +98,7 @@ class DatabaseCommandProcessor:
             return
 
         try:
-            message_id = int(args[0])
+            message_id = self.decode_base36(args[0])
         except ValueError:
             self.io.display_message("Command: Invalid ID format. Must be an integer.")
             return
@@ -139,6 +148,33 @@ class DatabaseCommandProcessor:
 
         self.io.display_message(f"Command: Loaded conversation with ID {message_id}")
 
+    @classmethod
+    def encode_base36(cls, val: int) -> str:
+        """Encode a positive integer into a base36 string."""
+        if val < 0:
+            msg = "Number must be non-negative"
+            raise ValueError(msg)
+        if val == 0:
+            return cls.ALPHABET36[0]
+
+        result = []
+        while val > 0:
+            val, remainder = divmod(val, 36)
+            result.append(cls.ALPHABET36[remainder])
+        return "".join(reversed(result))
+
+    @classmethod
+    def decode_base36(cls, val: str) -> int:
+        """Decodes base36 number (repsented by string) into base10 integer."""
+        val = val.strip().lower()
+        if not all(c in cls.ALPHABET36 for c in val):
+            msg = "Invalid base36 string"
+            raise ValueError(msg)
+        num = 0
+        for char in val:
+            num = num * 36 + cls.ALPHABET36.index(char)
+        return num
+
 
 class CommandProcessor:
     """Class which defines all available user commands and handles their execution."""
@@ -147,7 +183,6 @@ class CommandProcessor:
         """Init class for user commands execution."""
         self.session = session
         self.io = get_terminal_handler()
-        self.db = get_db_handler()
         self.cmd_db = DatabaseCommandProcessor(session)
         self.commands = {}
         self.register_default_commands()
