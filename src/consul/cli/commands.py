@@ -64,7 +64,7 @@ class CommandProcessor:
         # History manipulation
         self.register_command("r", self.cmd_clear, desc="Clear session history")
         self.register_command("f", self.cmd_flow, desc="Change used flow")
-        # self.register_command("a", self.cmd_archive, desc="Archive current conversation with optional metadata")
+        self.register_command("a", self.cmd_archive, desc="Archive current conversation with optional metadata")
         self.register_command("l", self.cmd_db_load, desc="Load conversation using ID")
         self.register_command("b", self.cmd_back, desc="Remove last N turns")
         self.register_command("v", self.cmd_db_view, desc="View 10 latest conversations from history db.")
@@ -159,7 +159,14 @@ class CommandProcessor:
     def cmd_db_view(self, args: list[str]) -> None:
         """Show latest 10 rows from the database view."""
         self.st_load = 10
-        # self.st_latest_table: str = "a" if args[0] == "a" else "h"
+
+        # handle case when arguments are missing or invalid
+        if args and args[0].lower() == "a":
+            self.st_latest_table = "a"
+        else:
+            self.st_latest_table = "h"
+
+        # load and display latest db view data
         data = self._get_history_db_data()
         self.io.display_table(self.st_history_cols, self._parse_db_data(data))
         self.io.display_message(
@@ -240,9 +247,13 @@ class CommandProcessor:
     def cmd_archive(self, args: list[str]) -> None:
         """Takes current chat history and updates existing db rows witch archive flag and metadata values."""
         metadata = self._parse_metadata(args)
-        # TODO: Update this method to change archive flag to columns with corresponding self.session.cid and store
-        # the parsed metadata in the corresponding column.
-        self.io.display_message(f"Command: Conversation '{self.session.cid}' archived.")
+
+        updated_rows = self.db.update(
+            MessageLogTable,
+            filters={"cid": self.session.cid},
+            update_values={"archived": True, "custom_metadata": metadata},
+        )
+        self.io.display_message(f"Command: Conversation '{self.session.cid}' archived. ({updated_rows} rows updated)")
 
     # SUPPORTING METHODS
 
@@ -275,8 +286,8 @@ class CommandProcessor:
 
     def _get_history_db_data(self) -> list[tuple]:
         """Load 'self.load' data from history and convert them into table printable format."""
-        # TODO: Modify to show only archived values if "a" flag is parsed in the args. To properly understand the table
-        # structure, read also the MessageLogTable
+        # TODO: Modify to show only archived values if self.st_latest_table == "a". To properly understand the table
+        # structure, read also the MessageLogTable and the database handler.
 
         # Query the first message for each unique cid (by smallest id),
         # returning id, cid, message, and flow, ordered by newest conversation start,
@@ -293,6 +304,10 @@ class CommandProcessor:
             .order_by(MessageLogTable.created_at.desc())
             .limit(self.st_load)
         )
+        # apply filter for archives if user selected archived table view
+        if self.st_latest_table == "a":
+            statement = statement.where(MessageLogTable.archived.is_(True))
+
         data = self.db.load(MessageLogTable, statement=statement)
 
         # Convert data for better readability. Especially the next() call is really lovely lol. It takes first text from

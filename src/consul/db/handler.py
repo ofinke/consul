@@ -3,6 +3,7 @@ import functools
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import create_engine
+from sqlalchemy import update as sql_update
 from sqlalchemy.sql import Select
 from sqlmodel import Session, SQLModel
 
@@ -48,6 +49,19 @@ class DBHandler:
             except Exception:
                 session.rollback()
                 raise
+
+    def update[T: BaseModel](self, model: type[T], filters: dict[str, object], update_values: dict[str, object]) -> int:
+        """Update rows in the table that match given filters with provided values."""
+        with Session(self.engine) as session:
+            try:
+                stmt = sql_update(model).filter_by(**filters).values(**update_values)
+                result = session.exec(stmt)
+                session.commit()
+            except Exception:
+                session.rollback()
+                raise
+            else:
+                return result.rowcount if result else 0
 
 
 @functools.cache

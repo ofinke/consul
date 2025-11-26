@@ -9,7 +9,7 @@ from langchain_core.tools import tool
 from loguru import logger
 from unidiff import PatchSet
 
-from consul.cli.terminal import TerminalHandler
+from consul.cli.terminal import get_terminal_handler
 
 
 def _ensure_temp_dir() -> Path:
@@ -37,10 +37,11 @@ def _show_diff_in_vscode(original_file: Path, modified_file: Path) -> tuple[bool
 
 def _get_user_approval() -> tuple[bool, str]:
     """Get user approval for changes."""
-    choice = TerminalHandler.prompt_user_input("→ Accept suggested changes? [y/N]: ")
+    io = get_terminal_handler()
+    choice = io.prompt_user_input("→ Accept suggested changes? [y/N]: ")
     if choice == "y":
         return True, ""
-    reason = TerminalHandler.prompt_user_input("→ Comment why changes were rejected: ")
+    reason = io.prompt_user_input("→ Comment why changes were rejected: ")
     return False, reason
 
 
