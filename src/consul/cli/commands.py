@@ -16,176 +16,30 @@ from consul.flows.logging import LoggingHandler
 from consul.flows.session import FlowSession
 
 
-class DatabaseCommandProcessor:
-    """Class holding Command operations related to database."""
-
-    # TODO: Update _get_history_db_data when archive is implemented in the history table.
-    # Will probably want to show ID, First message / Summary, Flow, Archive flag, ?metadata?
-
-    # TODO: Implement arg into db_view (a, archive) which prints only latest messages with archive falg True
-    ALPHABET36: ClassVar[str] = string.digits + string.ascii_lowercase
-
-    def __init__(self, session: FlowSession) -> None:
-        """Init processor for database commands."""
-        self.load: int = 10
-        self.view: int = 10
-        self.latest_table: str = "h"
-        self.session = session
-        self.db = get_db_handler()
-        self.io = get_terminal_handler()
-        self.cfg_history_cols = ("ID", "First user message", "Flow", "Archive")
-
-    def _get_history_db_data(self) -> list[tuple]:
-        """Load 'self.load' data from history and convert them into table printable format."""
-        # Query the first message for each unique cid (by smallest id),
-        # returning id, cid, message, and flow, ordered by newest conversation start,
-        # limited to 5.
-        subq = select(func.min(MessageLogTable.id).label("min_id")).group_by(MessageLogTable.cid).subquery()
-        statement = (
-            select(
-                MessageLogTable.id,
-                MessageLogTable.content_blocks,
-                MessageLogTable.flow,
-                MessageLogTable.archived,
-            )
-            .join(subq, MessageLogTable.id == subq.c.min_id)
-            .order_by(MessageLogTable.created_at.desc())
-            .limit(self.load)
-        )
-        data = self.db.load(MessageLogTable, statement=statement)
-
-        # Convert data for better readability. Especially the next() call is really lovely lol. It takes first text from
-        # langchains content_blocks and truncate the string according to the desired limit.
-        lim = 300
-        udata = [
-            (
-                self.encode_base36(row[0]),
-                f"{next((d['text'][:lim] for d in row[1] if d.get('type') == 'text'), '')}{'...' if len(row[2]) > lim else ''}",  # noqa: E501
-                row[2],
-                "O" if row[3] else "X",
-            )
-            for row in data
-        ]
-
-        return udata[-self.view :]
-
-    def db_view(self, args: list[str]) -> None:
-        """Show latest 10 rows from the database view."""
-        self.load = 10
-        self.latest_table: str = "h"
-        self.io.display_table(self.cfg_history_cols, self._get_history_db_data())
-        self.io.display_message(f"Command: Showing last {self.view} from {self.load} latest conversations.")
-
-    # def cmd_arch_view(self, _: list[str]) -> None:
-    #     """Show latest messages from archive."""
-
-    def db_down(self, args: list[str]) -> None:
-        """Scroll down the database history."""
-        self.load += int(args[0]) if args else 10
-        self.io.display_table(self.cfg_history_cols, self._get_history_db_data())
-        self.io.display_message(f"Command: Showing last {self.view} from {self.load} latest conversations.")
-
-    def db_up(self, _: list[str]) -> None:
-        """Scroll down the database history."""
-        self.load = max(self.load - 10, 10)
-        self.io.display_table(self.cfg_history_cols, self._get_history_db_data())
-        self.io.display_message(f"Command: Showing last {self.view} from {self.load} latest conversations.")
-
-    def db_load(self, args: list[str]) -> None:
-        """Loads conversation from history from database."""
-        if not args:
-            self.io.display_message("Command: Please provide a message ID.")
-            return
-
-        try:
-            message_id = self.decode_base36(args[0])
-        except ValueError:
-            self.io.display_message("Command: Invalid ID format. Must be an integer.")
-            return
-
-        # First, get the cid for the given message ID
-        cid_stmt = select(MessageLogTable.cid).where(MessageLogTable.id == message_id)
-        cid_result = self.db.load(MessageLogTable, statement=cid_stmt)
-        if not cid_result:
-            self.io.display_message(f"Command: No conversation found for ID {message_id}.")
-            return
-
-        cid = cid_result[0][0]
-
-        # Now retrieve all messages for this cid ordered by oldest first
-        conv_stmt = (
-            select(
-                MessageLogTable.cid,
-                MessageLogTable.author,
-                MessageLogTable.flow,
-                MessageLogTable.content_blocks,
-                MessageLogTable.tool_call_id,
-            )
-            .where(MessageLogTable.cid == cid)
-            .order_by(MessageLogTable.created_at.asc())
-        )
-        conversation_data = self.db.load(MessageLogTable, statement=conv_stmt)
-
-        if not conversation_data:
-            self.io.display_message(f"Command: No messages found for conversation {cid}.")
-            return
-
-        # Create the new history
-        self.session.clear_history()
-        self.session.change_flow(AvailableFlow(conversation_data[0][2]))
-        self.session.cid = cid
-        new_history = []
-        for row in conversation_data:
-            if row[1] == "human":
-                new_history.append(HumanMessage(content_blocks=row[3]))
-                self.io.display_message(f"User: {new_history[-1].text}")
-            if row[1] == "ai":
-                new_history.append(AIMessage(content_blocks=row[3]))
-                self.io.display_message(f"Assistant: {new_history[-1].text}") if new_history[-1].text else None
-            if row[1] == "tool":
-                new_history.append(ToolMessage(content_blocks=row[3], tool_call_id=row[4]))
-        self.session.chat_history = new_history
-
-        self.io.display_message(f"Command: Loaded conversation with ID {message_id}")
-
-    @classmethod
-    def encode_base36(cls, val: int) -> str:
-        """Encode a positive integer into a base36 string."""
-        if val < 0:
-            msg = "Number must be non-negative"
-            raise ValueError(msg)
-        if val == 0:
-            return cls.ALPHABET36[0]
-
-        result = []
-        while val > 0:
-            val, remainder = divmod(val, 36)
-            result.append(cls.ALPHABET36[remainder])
-        return "".join(reversed(result))
-
-    @classmethod
-    def decode_base36(cls, val: str) -> int:
-        """Decodes base36 number (repsented by string) into base10 integer."""
-        val = val.strip().lower()
-        if not all(c in cls.ALPHABET36 for c in val):
-            msg = "Invalid base36 string"
-            raise ValueError(msg)
-        num = 0
-        for char in val:
-            num = num * 36 + cls.ALPHABET36.index(char)
-        return num
-
-
 class CommandProcessor:
-    """Class which defines all available user commands and handles their execution."""
+    """
+    Class which defines all available user commands and handles their execution.
+    Each command has a corresponding method starting with prefix 'cmd_', supporting methods start with '_'. Commands
+    can be registered using the `register_command` method and default commands with their description are defined in the
+    'register_default_commands' method. To correctly execute a command, the 'process_input' should be invoked.
+    """
+
+    # Alphabet used for the base36 encoding / decoding
+    ALPHABET36: ClassVar[str] = string.digits + string.ascii_lowercase
 
     def __init__(self, session: FlowSession) -> None:
         """Init class for user commands execution."""
         self.session = session
         self.io = get_terminal_handler()
-        self.cmd_db = DatabaseCommandProcessor(session)
+        self.db = get_db_handler()
         self.commands = {}
         self.register_default_commands()
+
+        # state and config variables used mainly to handle and update stare related to commands for db managment
+        self.st_load: int = 10
+        self.st_view: int = 10
+        self.st_latest_table: str = "h"
+        self.st_history_cols = ("ID", "First user message", "Flow", "Archive")
 
     def register_command(self, name: str, handler: Callable, aliases: list[str] | None = None, desc: str = "") -> None:
         """Register command into instance registry."""
@@ -211,12 +65,12 @@ class CommandProcessor:
         self.register_command("r", self.cmd_clear, desc="Clear session history")
         self.register_command("f", self.cmd_flow, desc="Change used flow")
         # self.register_command("a", self.cmd_archive, desc="Archive current conversation with optional metadata")
-        self.register_command("l", self.cmd_db.db_load, desc="Load conversation using ID")
+        self.register_command("l", self.cmd_db_load, desc="Load conversation using ID")
         self.register_command("b", self.cmd_back, desc="Remove last N turns")
-        self.register_command("v", self.cmd_db.db_view, desc="View 10 latest conversations from history db.")
+        self.register_command("v", self.cmd_db_view, desc="View 10 latest conversations from history db.")
         # self.register_command("e", self.cmd_db_exit, desc="Exit DB view")
-        self.register_command("u", self.cmd_db.db_up, desc="Scroll up in DB view")
-        self.register_command("d", self.cmd_db.db_down, desc="Scroll down in DB view")
+        self.register_command("u", self.cmd_db_up, desc="Scroll up in DB view")
+        self.register_command("d", self.cmd_db_down, desc="Scroll down in DB view")
 
     def process_input(self, input_str: str) -> None:
         # Split chained commands: /l 345 /b 2
@@ -302,25 +156,170 @@ class CommandProcessor:
         # Inform user
         self.io.display_message(f"Command: Removed last {steps} turn(s) and created new conversation history.")
 
-    # def cmd_archive(self, args):
-    #     metadata = self._parse_metadata(args)
-    #     summary = self.session.summarize()
-    #     self.db.archive_conversation(self.session.chat_history, summary, metadata)
-    #     self.io.display_message("Conversation archived.")
+    def cmd_db_view(self, args: list[str]) -> None:
+        """Show latest 10 rows from the database view."""
+        self.st_load = 10
+        # self.st_latest_table: str = "a" if args[0] == "a" else "h"
+        data = self._get_history_db_data()
+        self.io.display_table(self.st_history_cols, self._parse_db_data(data))
+        self.io.display_message(
+            f"Command: Showing last {self.st_view} from {self.st_load} latest{' archived ' if self.st_latest_table == 'a' else ' '}conversations."  # noqa: E501
+        )
 
-    # def cmd_load(self, args):
-    #     conv_id = args[0] if args else None
-    #     if conv_id:
-    #         conversation = self.db.load_conversation(conv_id)
-    #         self.session.load_history(conversation)
-    #         self.io.display_message(f"Loaded conversation {conv_id}")
+    def cmd_db_down(self, args: list[str]) -> None:
+        """Scroll down the database history."""
+        self.st_load += int(args[0]) if args else 10
+        data = self._get_history_db_data()
+        self.io.display_table(self.st_history_cols, self._parse_db_data(data))
+        self.io.display_message(f"Command: Showing last {self.st_view} from {self.st_load} latest conversations.")
 
-    # # ... other handlers ...
+    def cmd_db_up(self, _: list[str]) -> None:
+        """Scroll down the database history."""
+        self.st_load = max(self.st_load - 10, 10)
+        data = self._get_history_db_data()
+        self.io.display_table(self.st_history_cols, self._parse_db_data(data))
+        self.io.display_message(f"Command: Showing last {self.st_view} from {self.st_load} latest conversations.")
 
-    # def _parse_metadata(self, args):
-    #     metadata = {}
-    #     for arg in args:
-    #         if "=" in arg:
-    #             k, v = arg.split("=", 1)
-    #             metadata[k] = v
-    #     return metadata
+    def cmd_db_load(self, args: list[str]) -> None:
+        """Loads conversation from history from database."""
+        if not args:
+            self.io.display_message("Command: Please provide a message ID.")
+            return
+
+        try:
+            message_id = self.decode_base36(args[0])
+        except ValueError:
+            self.io.display_message("Command: Invalid ID format. Must be an integer.")
+            return
+
+        # First, get the cid for the given message ID
+        cid_stmt = select(MessageLogTable.cid).where(MessageLogTable.id == message_id)
+        cid_result = self.db.load(MessageLogTable, statement=cid_stmt)
+        if not cid_result:
+            self.io.display_message(f"Command: No conversation found for ID {message_id}.")
+            return
+
+        cid = cid_result[0][0]
+
+        # Now retrieve all messages for this cid ordered by oldest first
+        conv_stmt = (
+            select(
+                MessageLogTable.cid,
+                MessageLogTable.author,
+                MessageLogTable.flow,
+                MessageLogTable.content_blocks,
+                MessageLogTable.tool_call_id,
+            )
+            .where(MessageLogTable.cid == cid)
+            .order_by(MessageLogTable.created_at.asc())
+        )
+        conversation_data = self.db.load(MessageLogTable, statement=conv_stmt)
+
+        if not conversation_data:
+            self.io.display_message(f"Command: No messages found for conversation {cid}.")
+            return
+
+        # Create the new history
+        self.session.clear_history()
+        self.session.change_flow(AvailableFlow(conversation_data[0][2]))
+        self.session.cid = cid
+        new_history = []
+        for row in conversation_data:
+            if row[1] == "human":
+                new_history.append(HumanMessage(content_blocks=row[3]))
+                self.io.display_message(f"User: {new_history[-1].text}")
+            if row[1] == "ai":
+                new_history.append(AIMessage(content_blocks=row[3]))
+                self.io.display_message(f"Assistant: {new_history[-1].text}") if new_history[-1].text else None
+            if row[1] == "tool":
+                new_history.append(ToolMessage(content_blocks=row[3], tool_call_id=row[4]))
+        self.session.chat_history = new_history
+
+        self.io.display_message(f"Command: Loaded conversation with ID {message_id}")
+
+    def cmd_archive(self, args: list[str]) -> None:
+        """Takes current chat history and updates existing db rows witch archive flag and metadata values."""
+        metadata = self._parse_metadata(args)
+        # TODO: Update this method to change archive flag to columns with corresponding self.session.cid and store
+        # the parsed metadata in the corresponding column.
+        self.io.display_message(f"Command: Conversation '{self.session.cid}' archived.")
+
+    # SUPPORTING METHODS
+
+    @classmethod
+    def encode_base36(cls, val: int) -> str:
+        """Encode a positive integer into a base36 string."""
+        if val < 0:
+            msg = "Number must be non-negative"
+            raise ValueError(msg)
+        if val == 0:
+            return cls.ALPHABET36[0]
+
+        result = []
+        while val > 0:
+            val, remainder = divmod(val, 36)
+            result.append(cls.ALPHABET36[remainder])
+        return "".join(reversed(result))
+
+    @classmethod
+    def decode_base36(cls, val: str) -> int:
+        """Decodes base36 number (repsented by string) into base10 integer."""
+        val = val.strip().lower()
+        if not all(c in cls.ALPHABET36 for c in val):
+            msg = "Invalid base36 string"
+            raise ValueError(msg)
+        num = 0
+        for char in val:
+            num = num * 36 + cls.ALPHABET36.index(char)
+        return num
+
+    def _get_history_db_data(self) -> list[tuple]:
+        """Load 'self.load' data from history and convert them into table printable format."""
+        # TODO: Modify to show only archived values if "a" flag is parsed in the args. To properly understand the table
+        # structure, read also the MessageLogTable
+
+        # Query the first message for each unique cid (by smallest id),
+        # returning id, cid, message, and flow, ordered by newest conversation start,
+        # limited to 5.
+        subq = select(func.min(MessageLogTable.id).label("min_id")).group_by(MessageLogTable.cid).subquery()
+        statement = (
+            select(
+                MessageLogTable.id,
+                MessageLogTable.content_blocks,
+                MessageLogTable.flow,
+                MessageLogTable.archived,
+            )
+            .join(subq, MessageLogTable.id == subq.c.min_id)
+            .order_by(MessageLogTable.created_at.desc())
+            .limit(self.st_load)
+        )
+        data = self.db.load(MessageLogTable, statement=statement)
+
+        # Convert data for better readability. Especially the next() call is really lovely lol. It takes first text from
+        # langchains content_blocks and truncate the string according to the desired limit.
+        lim = 300
+        udata = [
+            (
+                self.encode_base36(row[0]),
+                f"{next((d['text'][:lim] for d in row[1] if d.get('type') == 'text'), '')}{'...' if len(row[2]) > lim else ''}",  # noqa: E501
+                row[2],
+                "O" if row[3] else "X",
+            )
+            for row in data
+        ]
+
+        return udata[-self.st_view :]
+
+    def _parse_db_data(self, data: list[tuple]) -> list[tuple]:
+        """Convert raw data from _get_history_db_data table into human readable format."""
+        # TODO: Move the data parsing from _get_history_db_data and make it more readable.
+        return data
+
+    def _parse_metadata(self, args: list[str]) -> dict[str, str]:
+        """Parses metadata in format key=value into dict {"key" : "value"}."""
+        metadata = {}
+        for arg in args:
+            if "=" in arg:
+                k, v = arg.split("=", 1)
+                metadata[k] = v
+        return metadata
