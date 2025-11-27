@@ -12,9 +12,6 @@ class BaseTable(SQLModel, table=False):
     All database tables in consul should inherit this model.
     """
 
-    # TODO: Think about the ID options as I'm using the ID to retrieve data, is there some equivalent which allows me
-    # to store more data for example in 4 signs? some hexadecimal or other? Goal is to have as much row with ids < 5
-    # letters. Use the the ID 183 conversation from my work DB by writing base36encode, decode utils
     id: int | None = Field(
         default=None,
         primary_key=True,

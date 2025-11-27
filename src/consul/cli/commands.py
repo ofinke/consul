@@ -286,9 +286,6 @@ class CommandProcessor:
 
     def _get_history_db_data(self) -> list[tuple]:
         """Load 'self.load' data from history and convert them into table printable format."""
-        # TODO: Modify to show only archived values if self.st_latest_table == "a". To properly understand the table
-        # structure, read also the MessageLogTable and the database handler.
-
         # Query the first message for each unique cid (by smallest id),
         # returning id, cid, message, and flow, ordered by newest conversation start,
         # limited to 5.
