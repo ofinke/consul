@@ -32,7 +32,7 @@ class BaseGraphState(BaseModel):
     messages: Sequence[BaseMessage]
 
     def shallow_dump(self) -> dict[str, Any]:
-        """Shallow dump into a dictionary without dumping nested pydantic model."""
+        """Shallow dump into a dictionary without dumping nested pydantic model(s)."""
         cls = self.__class__
         keys = chain(cls.model_fields.keys(), cls.model_computed_fields.keys())
         return {k: getattr(self, k) for k in keys}
@@ -90,7 +90,7 @@ class BaseFlow(ABC):
         """Prepares the system prompt."""
 
     @abstractmethod
-    def build_graph(self) -> StateGraph | CompiledStateGraph:
+    async def build_graph(self) -> StateGraph | CompiledStateGraph:
         """
         Define langgraph graph of operations.
         Returns either StateGraph for custom graph definitions or already compiled graph when using predefined ones.
@@ -119,7 +119,7 @@ class BaseFlow(ABC):
         logger.error(msg)
         raise ValueError(msg)
 
-    def prepare_to_run(self, input_data: dict[str, any]) -> BaseFlowInput:
+    async def prepare_to_run(self, input_data: dict[str, any]) -> BaseFlowInput:
         """
         Prepares the task to run by:
         - Validating input data.
@@ -151,23 +151,15 @@ class BaseFlow(ABC):
 
         # Get or build graph
         if not self._compiled_graph:
-            self._graph = self.build_graph()
+            self._graph = await self.build_graph()
             self._compiled_graph = self._graph if isinstance(self._graph, CompiledStateGraph) else self._graph.compile()
             logger.debug(f"Task '{self.config.name}' graph edges: {self._compiled_graph.get_graph().edges}")
             logger.debug(f"Task '{self.config.name}' graph nodes: {self._compiled_graph.get_graph().nodes}")
 
         return validated_input
 
-    def execute(self, input_data: dict[str, any]) -> BaseGraphState:
+    async def aexecute(self, input_data: dict[str, any]) -> BaseGraphState:
         """Execute the task with given input."""
-        validated_input = self.prepare_to_run(input_data)
-        result = self._compiled_graph.invoke(validated_input)
+        validated_input = await self.prepare_to_run(input_data)
+        result = await self._compiled_graph.ainvoke(validated_input)
         return self.state_schema(**result)
-
-    # TODO: write full async implementation
-    # async def aexecute(self, input_data: dict[str, any]) -> BaseGraphState:
-    #     """Async version of execute."""
-    #     logger.info(f"Async executing task: '{self.config.name}'")
-    #     validated_input = self.prepare_to_run(input_data)
-    #     result = await self._compiled_graph.ainvoke(validated_input)
-    #     return self.state_schema(**result)

@@ -2,9 +2,9 @@ from langchain_core.messages import ChatMessage
 from langgraph.graph import StateGraph
 
 from consul.core.config.flows import AvailableFlow
-from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
 from consul.flows.logging import LoggingHandler
+from consul.prompts.registry import get_prompt_registry
 
 
 class ChatTask(BaseFlow):
@@ -25,11 +25,11 @@ class ChatTask(BaseFlow):
 
     def build_system_prompt(self) -> list[ChatMessage]:
         return [
-            ChatMessage(role=turn.side, content=turn.text.format_map(PROMPT_FORMAT_MAPPING))
+            ChatMessage(role=turn.side, content=turn.text.format_map(get_prompt_registry().entries))
             for turn in self.config.prompt_history
         ]
 
-    def build_graph(self) -> StateGraph:
+    async def build_graph(self) -> StateGraph:
         """Default graph: create prompt -> call LLM -> process the answer."""
         graph = StateGraph(self.state_schema)
 

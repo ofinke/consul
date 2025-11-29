@@ -1,10 +1,7 @@
 import tomllib
 from pathlib import Path
 
-from consul.core.config.prompts import register_prompt_format
 
-
-@register_prompt_format
 def get_project_python_version() -> str:
     """Gets the project's Python version from .python-version or pyproject.toml."""
     # project dir

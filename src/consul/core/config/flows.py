@@ -1,15 +1,12 @@
 from enum import Enum
 from functools import lru_cache
 from importlib import resources
-from pathlib import Path
 
 import yaml
 from loguru import logger
 from pydantic import BaseModel
 
-from consul.core.config.base import ChatTurnConfig
 from consul.core.config.tools import AvailableTools
-from consul.core.settings import get_project_root
 
 
 class AvailableFlow(Enum):
@@ -28,6 +25,34 @@ class LLMParameters(BaseModel):
     # it dissapears if we are dumping the message, which we do before logging. Maybe more unknown issues arise. When
     # running this parameter with unsupported model, the request fails completely
     # reasoning: dict = {"effort": "low"}
+
+
+class ChatTurnConfig(BaseModel):
+    # TODO: Get rid of this in a name of simplification?
+    side: str
+    text: str
+    variables: list[str] | None = None
+
+    def dump_tuple(self) -> tuple[str, str]:
+        return (self.side.value, self.text)
+
+
+class ToolConfig(BaseModel):
+    """
+    Configuration of default tools available to the agent.
+    Expected functionality:
+     - servers: list of MCP servers names to use. Server params are then loaded from database.
+     - include: tools to include from specific servers: 'local:find' includes find tool from local server.
+     - exclude: opposite of the include.
+    """
+
+    # TODO: Implement this so it's functional and get rid of AvailableTools.
+    servers: set[str] | None = None
+    include: list[str] | None = None
+    exclude: list[str] | None = None
+
+    def validate_servers():
+        """Include all server names from include/exclude and returns a set of all servers mentioned."""
 
 
 class AgentParameters(BaseModel):

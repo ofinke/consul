@@ -5,7 +5,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from langchain_core.tools import tool
 from loguru import logger
 from unidiff import PatchSet
 
@@ -130,7 +129,6 @@ def _apply_patch(original_content: str, patch: str) -> str:
     return "".join(patched_lines)
 
 
-@tool
 def propose_code_edit(file_path: str, patch: str) -> dict[str, str]:
     """
     Apply a patch to an existing file using unified diff format with a valid hunk header.
@@ -195,7 +193,6 @@ def propose_code_edit(file_path: str, patch: str) -> dict[str, str]:
             modified_file.unlink(missing_ok=True)
 
 
-@tool
 def propose_new_code(file_path: str, content: str) -> dict[str, str]:
     """
     Propose new code into a new file.

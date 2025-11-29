@@ -2,7 +2,6 @@ import re
 from pathlib import Path
 
 import pathspec
-from langchain_core.tools import tool
 
 
 def load_ignore_patterns(ignore_file: str = ".gitignore") -> pathspec.PathSpec | None:
@@ -14,7 +13,6 @@ def load_ignore_patterns(ignore_file: str = ".gitignore") -> pathspec.PathSpec |
     return None
 
 
-@tool
 def find(
     pattern_type: str,
     search_term: str,

@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import AgentMiddleware, AgentState
@@ -8,13 +7,10 @@ from langgraph.runtime import Runtime
 from loguru import logger
 
 from consul.core.config.flows import AvailableFlow
-from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
-from consul.core.config.tools import TOOL_MAPPING
 from consul.flows.base import BaseFlow, BaseGraphState
 from consul.flows.logging import LoggingHandler
-
-if TYPE_CHECKING:
-    from langchain_core.tools import BaseTool
+from consul.prompts.registry import get_prompt_registry
+from consul.tools.registry import get_tool_registry
 
 
 class StateSchema(AgentState):
@@ -63,7 +59,7 @@ class LangReactFlow(BaseFlow):
     def __init__(self, flow_name: AvailableFlow) -> None:
         """Same as BaseFlow init + prepare variable for tools."""
         super().__init__(flow_name)
-        self._tools_by_name: dict[str, BaseTool] = {}
+        self.tools_registry = get_tool_registry(None)
 
     @property
     def input_schema(self) -> BaseGraphState:
@@ -79,7 +75,7 @@ class LangReactFlow(BaseFlow):
         If flow prompt is defined using multiple messages, merges them into a single one as needed by
         create_agent function.
         """
-        chat_history = [turn.text.format_map(PROMPT_FORMAT_MAPPING) for turn in self.config.prompt_history]
+        chat_history = [turn.text.format_map(get_prompt_registry().entries) for turn in self.config.prompt_history]
         if len(chat_history) > 1:
             msg = (
                 f"Flow '{self.flow_name.value}' has more than 1 defining system messages.",
@@ -88,12 +84,13 @@ class LangReactFlow(BaseFlow):
             logger.warning(msg)
         return "\n".join(chat_history)
 
-    def build_graph(self) -> CompiledStateGraph:
+    async def build_graph(self) -> CompiledStateGraph:
         """Returns langgraph pre-defined react agent."""
         logger.debug("Creating predefined langgraph react agent using 'create_agent' function")
+        await self.tools_registry.register_tools()
         return create_agent(
             model=self.get_llm(),
-            tools=[TOOL_MAPPING[tool] for tool in self.config.tools],
+            tools=self.tools_registry.get_all(),
             system_prompt=self._system_prompt,
             middleware=[
                 InterfaceMiddleware(),

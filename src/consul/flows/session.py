@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from typing import ClassVar
 
@@ -67,7 +68,7 @@ class FlowSession:
         }
 
         # Execute the flow
-        result = self.flow.execute(input_state)
+        result = asyncio.run(self.flow.aexecute(input_state))
 
         # Store response in history and return model answer
         new_history_part = result.messages[len(self.chat_history) :]

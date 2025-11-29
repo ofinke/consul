@@ -2,8 +2,6 @@ import fnmatch
 import os
 from pathlib import Path
 
-from consul.core.config.prompts import register_prompt_format
-
 HARDCODED_IGNORES: list[str] = [".git", ".DS_Store", "__pycache__", ".venv", ".env"]
 
 
@@ -52,7 +50,6 @@ def _matches_any(patterns: list[str], rel_path: str) -> bool:
     return False
 
 
-@register_prompt_format
 def get_project_tree(max_depth: int | None = 3) -> str:
     """
     Generate the folder tree structure from the current working directory,
@@ -90,7 +87,7 @@ def get_project_tree(max_depth: int | None = 3) -> str:
         scanned_depth = max(scanned_depth, depth)
 
         if max_depth is not None and depth >= max_depth:
-             return []  # stop scanning deeper
+            return []  # stop scanning deeper
 
         if accumulated_patterns is None:
             accumulated_patterns = []
@@ -103,9 +100,7 @@ def get_project_tree(max_depth: int | None = 3) -> str:
         except PermissionError:
             return []
 
-        entries = [
-            e for e in entries if not (rel_path == "" and e.name == ".gitignore")
-        ]
+        entries = [e for e in entries if not (rel_path == "" and e.name == ".gitignore")]
 
         kept_entries: list[Path] = []
         for entry in entries:

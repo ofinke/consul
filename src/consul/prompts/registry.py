@@ -2,24 +2,37 @@ import functools
 
 from consul.core.abc import Registry
 
+from .general import get_current_datetime
+from .project import get_project_python_version
+from .tree import get_project_tree
+
+# TODO: make registering default prompts as as much automatic as possible? or at least as painful as possible?
+
+# TODO: Modify the registry, so the functions are stored without executing them and then execute them, when necessary.
+
 
 class PromptRegistry(Registry):
-
-    # TODO: Idea is, that when the instance of PromptRegistry is created, i automatically registers all prompts in the
-    # consul.prompt package. Si probably use similar method as in original implementation? Originally it used 
-    # a decorator which triggered when the function autodiscover_plugins ran. Can I do it using class method?
+    """
+    Static registry for all functions which return dynamic prompt parts.
+    The prompt registry is initialized with all registered functions at app startup and is meant to be shared with
+    accross the llm flows.
+    """
 
     def __init__(self):
         super().__init__()
+        self.register_default_prompts()
 
-
-    def autoregister_prompt(self, func: callable) -> callable:
-        self.register(func.__name__, func())
-        return func
-
-
+    def register_default_prompts(self) -> None:
+        prompt_functions = [
+            get_current_datetime,
+            get_project_python_version,
+            get_project_tree,
+        ]
+        for func in prompt_functions:
+            self.register(func.__name__, func())
 
 
 @functools.cache
 def get_prompt_registry() -> PromptRegistry:
+    """Returns singleton instance of the PromptRegistry cached via functools.cache."""
     return PromptRegistry()

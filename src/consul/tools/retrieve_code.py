@@ -1,17 +1,10 @@
 import ast
 from pathlib import Path
 
-from langchain_core.tools import tool
-
 from .utils import parse_ast_from_content, read_file_lines
 
 
-@tool
-def get_source_code(
-    target_type: str,
-    file_path: str,
-    name: str | None = None,
-) -> dict[str, str]:
+def get_source_code(target_type: str, file_path: str, name: str | None = None) -> dict[str, str | int]:
     """
     Retrieve complete source code for a specific function, class, method, or entire file.
 
