@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from typing import Any
 
 from loguru import logger
@@ -20,7 +19,7 @@ class Registry:
         try:
             return self.entries.get(name)
         except KeyError as e:
-            msg = f"Registry {self.__class__} doesn't contain entry tied to '{name}'."
+            msg = f"Registry '{self.__class__}' doesn't contain entry tied to '{name}'."
             logger.warning(msg)
             raise KeyError(msg) from e
 

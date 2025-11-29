@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from consul.cli.exceptions import CommandInterrupt
 from consul.cli.terminal import get_terminal_handler
 from consul.cli.utils.save import save_memory
-from consul.core.config.flows import AvailableFlow
+from consul.core.config import AvailableFlow
 from consul.db.handler import get_db_handler
 from consul.db.tables import MessageLogTable
 from consul.flows.logging import LoggingHandler

@@ -95,8 +95,11 @@ agent:
 
 # tools
 tools:
-  - find
-  - get_source_code
-  - propose_new_code
-  - propose_code_edit
-  - run_pytest
+  servers:
+    - local
+  include:
+    - local:find
+    - local:get_source_code
+    - local:propose_new_code
+    - local:propose_code_edit
+    - local:run_pytest

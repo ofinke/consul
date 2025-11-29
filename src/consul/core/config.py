@@ -1,12 +1,12 @@
+from collections import defaultdict
 from enum import Enum
 from functools import lru_cache
 from importlib import resources
+from typing import Self
 
 import yaml
 from loguru import logger
-from pydantic import BaseModel
-
-from consul.core.config.tools import AvailableTools
+from pydantic import BaseModel, model_validator
 
 
 class AvailableFlow(Enum):
@@ -28,7 +28,7 @@ class LLMParameters(BaseModel):
 
 
 class ChatTurnConfig(BaseModel):
-    # TODO: Get rid of this in a name of simplification?
+    # TODO: Get rid of this in the name of simplification?
     side: str
     text: str
     variables: list[str] | None = None
@@ -47,12 +47,48 @@ class ToolConfig(BaseModel):
     """
 
     # TODO: Implement this so it's functional and get rid of AvailableTools.
-    servers: set[str] | None = None
+    servers: list[str] | None = None
     include: list[str] | None = None
     exclude: list[str] | None = None
 
-    def validate_servers():
-        """Include all server names from include/exclude and returns a set of all servers mentioned."""
+    @model_validator(mode="after")
+    def validate_servers(self) -> Self:
+        """Add all server names from include/exclude in the 'servers' key."""
+        servers = self.servers
+        if self.include:
+            servers.extend([row.split(":")[0] for row in self.include])
+        if self.exclude:
+            servers.extend([row.split(":")[0] for row in self.exclude])
+        self.servers = list(set(servers))
+        return self
+
+    @property
+    def include_dict(self) -> dict[str, list[str]]:
+        """Returns include key as a dict in the format {"server_name": ["tool1", "tool2"]}."""
+        if not self.include:
+            return {}
+
+        result: dict[str, list[str]] = defaultdict(list)
+        for tool in self.include:
+            if ":" not in tool:
+                continue  # skip invalid entries
+            name, value = tool.split(":", 1)  # split only on first colon
+            result[name].append(value)
+        return dict(result)
+
+    @property
+    def exclude_dict(self) -> dict[str, list[str]]:
+        """Returns exclude key as a dict in the format {"server_name": ["tool1", "tool2"]}."""
+        if not self.exclude:
+            return {}
+
+        result: dict[str, list[str]] = defaultdict(list)
+        for tool in self.exclude:
+            if ":" not in tool:
+                continue  # skip invalid entries
+            name, value = tool.split(":", 1)  # split only on first colon
+            result[name].append(value)
+        return dict(result)
 
 
 class AgentParameters(BaseModel):
@@ -79,7 +115,7 @@ class BaseAgentConfig(BaseFlowConfig):
     agent: AgentParameters
 
     # tools
-    tools: list[AvailableTools]
+    tools: ToolConfig
 
 
 @lru_cache(maxsize=100)

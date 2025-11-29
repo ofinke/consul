@@ -4,7 +4,7 @@ import click
 from loguru import logger
 from pydantic import BaseModel
 
-from consul.core.config.flows import AvailableFlow
+from consul.core.config import AvailableFlow
 
 
 class UserArgs(BaseModel):

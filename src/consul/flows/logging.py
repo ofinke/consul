@@ -27,7 +27,7 @@ class LoggingHandler:
         Supports typed dictionaries which are by default used in langgraph as states or pydantic models used in
         my custom flow definitions.
         """
-        # First we have to determine if our message can be logger at all. If state is not dictionary, we do shallow dump
+        # First we have to determine if our message can be logged at all. If state is not dictionary, we do shallow dump
         # State has to include flow and conversation_id identifiers. Then we also expect, that the message we are
         # logging is in one of the langchains messages types
         if isinstance(state, BaseGraphState):

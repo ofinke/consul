@@ -1,58 +1,59 @@
-import asyncio
 from pathlib import Path
+from typing import Any
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from loguru import logger
 
 from consul.core.abc import Registry
-from consul.core.config.flows import ToolConfig
-
-# TODO: Create the server address dynamically, so it's not stored as an hardcoded value using the get_tool_registry
-# function which takes the desired tools and then creates the Registry with them. Initializes and requests tools from
-# specific servers. We can filter tools from server by calling the mcp_client.get_tools(server_name = "local") and then
-# filter output.
-
-# TODO: Ensure that tool list is created only when the tools are desired, so we don't scrape the MCP server in cases
-# when we are not using the tools. This mean, that we will have to construct the registry when the graph is being build.
-# So the registry is more dynamic compared to the prompt registry, which is static and should be just a singleton
-# instance accross the whole app.
-# flow:
-# call get_tool_registry with parameter flow.config.tools
-# init with this config
-# get tools from all mentioned servers or from include: "server:tool_name"
-# filter the tools according to include/exclude parameter
-# register the tools in registry
+from consul.core.config import ToolConfig
 
 
 class ToolsRegistry(Registry):
-    """Registry of MCP tools."""
+    """Instance based registry of tools from multiple MCP servers."""
 
     def __init__(self, config: ToolConfig) -> None:
+        """Initilize tools registry based on desired tools defined in ToolConfig."""
         super().__init__()
-        self.mcp_client = MultiServerMCPClient(self.local_mcp_server)
+        self.config: ToolConfig = config
+        self.loaded_servers = self.load_server_configs(config.servers)
+        self.mcp_client = MultiServerMCPClient(self.loaded_servers)
 
     @property
     def local_mcp_server(self) -> dict[str, str | list[str]]:
-        """Return definition of local MCP server."""
+        """Return definition of the local MCP server."""
         # Construct address to local MCP server
         location = Path(__file__).parent / "server.py"
         return {
-            "local": {
-                "command": "python",
-                "args": [str(location)],
-                "transport": "stdio",
-            }
+            "command": "python",
+            "args": [str(location)],
+            "transport": "stdio",
         }
 
+    def load_server_configs(self, server_names: list[str]) -> list[dict[str, Any]]:
+        """Retrieves dictionary with MCP server connections based on server names."""
+        # TODO: Create MCP server connection definitions as a table in the database and retrieve the server connections
+        # here. We need to create some default connections (local MCP server) which are loaded into the database first
+        # time the app is started.
+        server_configs = {}
+        for server in server_names:
+            if server == "local":
+                server_configs[server] = self.local_mcp_server
+            else:
+                logger.warning(f"MCP server '{server}' doesn't have a defined configuration, skipping.")
+        return server_configs
+
     async def register_tools(self) -> None:
-        tools = await self.mcp_client.get_tools()
-        for tool in tools:
-            self.register(tool.name, tool)
+        """Registers prefiltered tools from all configured servers."""
+        # For each server, retrieve available tools and if necessary, filter them based on config include/exclude keys
+        for server in self.loaded_servers:
+            server_tools = await self.mcp_client.get_tools(server_name=server)
+            include_tools = self.config.include_dict.get(server, [])
+            exclude_tools = self.config.exclude_dict.get(server, [])
+            for tool in server_tools:
+                if tool.name in include_tools and tool.name not in exclude_tools:
+                    self.register(tool.name, tool)
 
 
 def get_tool_registry(config: ToolConfig) -> ToolsRegistry:
-    """Return instance of ToolRegistry based on ToolConfig definition."""
+    """Return instance of ToolRegistry with tools based on ToolConfig definition."""
     return ToolsRegistry(config)
-
-
-reg = get_tool_registry(None)
-asyncio.run(reg.register_tools())

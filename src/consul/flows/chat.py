@@ -1,7 +1,7 @@
 from langchain_core.messages import ChatMessage
 from langgraph.graph import StateGraph
 
-from consul.core.config.flows import AvailableFlow
+from consul.core.config import AvailableFlow
 from consul.flows.base import BaseFlow, BaseGraphState
 from consul.flows.logging import LoggingHandler
 from consul.prompts.registry import get_prompt_registry

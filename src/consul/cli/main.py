@@ -21,8 +21,6 @@ class ConsulInterface:
         # Initialize interface
         self.user_args = user_args
         self.io = get_terminal_handler()
-        self.session = FlowSession(self.user_args.flow)
-        self.commands = CommandProcessor(self.session)
 
         # Determine log level
         if user_args.quiet:
@@ -34,6 +32,11 @@ class ConsulInterface:
 
         logger.remove()
         logger.add(self.io.display_loguru_message, level=level, format="{message}")
+
+
+        self.session = FlowSession(self.user_args.flow)
+        self.commands = CommandProcessor(self.session)
+
 
     def start_interface(self) -> None:
         # Welcome message

@@ -143,8 +143,11 @@ agent:
 
 # tools
 tools:
-  - find
-  - get_source_code
-  - save_to_file
-  - propose_new_code
-  - propose_code_edit
+  servers:
+    - local
+  include:
+    - local:find
+    - local:get_source_code
+    - local:save_to_file
+    - local:propose_new_code
+    - local:propose_code_edit

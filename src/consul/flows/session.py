@@ -6,7 +6,7 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
 
 from consul.cli.utils.callback import interface_callback
-from consul.core.config.flows import AvailableFlow
+from consul.core.config import AvailableFlow
 from consul.flows.base import BaseFlow
 from consul.flows.chat import ChatTask
 from consul.flows.lang_react import LangReactFlow
@@ -24,6 +24,8 @@ class FlowSession:
     cid: str
 
     # existing flows
+    # TODO: Creation of this class causes debug logger printing which I don't want, but should be solved by the
+    # flow registry hopefully
     available_flows: ClassVar[dict[AvailableFlow, BaseFlow]] = {
         AvailableFlow.CHAT: ChatTask(AvailableFlow.CHAT),
         AvailableFlow.CODER: LangReactFlow(AvailableFlow.CODER),

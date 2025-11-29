@@ -6,7 +6,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 from loguru import logger
 
-from consul.core.config.flows import AvailableFlow
+from consul.core.config import AvailableFlow
 from consul.flows.base import BaseFlow, BaseGraphState
 from consul.flows.logging import LoggingHandler
 from consul.prompts.registry import get_prompt_registry
@@ -59,7 +59,7 @@ class LangReactFlow(BaseFlow):
     def __init__(self, flow_name: AvailableFlow) -> None:
         """Same as BaseFlow init + prepare variable for tools."""
         super().__init__(flow_name)
-        self.tools_registry = get_tool_registry(None)
+        self.tools_registry = get_tool_registry(self.config.tools)
 
     @property
     def input_schema(self) -> BaseGraphState:

@@ -6,11 +6,15 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from consul.core.config.flows import AvailableFlow
-from consul.core.config.tools import TOOL_MAPPING
+from consul.core.config import AvailableFlow
 from consul.flows.base import BaseFlow, BaseGraphState
 from consul.flows.logging import LoggingHandler
 from consul.prompts.registry import get_prompt_registry
+from consul.tools.registry import get_tool_registry
+
+# BUG: Currently tools are borked because the tool_registry needs .register_tools() method execution which is
+# async and should be executed in the same loop as the whole agent runtime and I'm too lazy to figure it now as I
+# don't really use this implementation anymore.
 
 
 class ReactAgentFlow(BaseFlow):
@@ -21,6 +25,7 @@ class ReactAgentFlow(BaseFlow):
         super().__init__(flow_name)
         self._tools_by_name: dict[str, BaseTool] = {}
         self.logging = LoggingHandler()
+        self.tools_registry = get_tool_registry(self.config.tools)
 
     @property
     def input_schema(self) -> BaseGraphState:
@@ -32,7 +37,7 @@ class ReactAgentFlow(BaseFlow):
 
     def get_tools(self) -> list[BaseTool]:
         """Return list of tools available to the agent."""
-        return [TOOL_MAPPING[tool] for tool in self.config.tools]
+        return self.tools_registry.get_all()
 
     def build_system_prompt(self) -> list[ChatMessage]:
         """Builds system prompt from config."""
@@ -64,7 +69,7 @@ class ReactAgentFlow(BaseFlow):
             """Logs user message, calls LLM, logs LLM answer, and appends LLM response to chat history."""
             full_history = [*self._system_prompt, *state.messages]
             self.logging.log_message(self.state_schema(messages=full_history, **state.model_dump(exclude="messages")))
-            response = await self._llm.invoke(full_history)
+            response = await self._llm.ainvoke(full_history)
             new_state = self.state_schema(messages=[*state.messages, response], **state.model_dump(exclude="messages"))
             self.logging.log_message(new_state)
             return new_state

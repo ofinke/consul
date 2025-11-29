@@ -160,5 +160,8 @@ agent:
 
 # tools
 tools:
-  - find
-  - get_source_code
+  servers:
+    - local
+  include:
+    - local:find
+    - local:get_source_code
