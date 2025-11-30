@@ -142,7 +142,7 @@ class BaseFlow(ABC):
         # Build system prompt
         if not self._system_prompt:
             self._system_prompt = self.build_system_prompt()
-            logger.debug(f"Task '{self.config.name}' {self._system_prompt=:.500}...")
+            logger.debug(f"Task '{self.config.name}' {self._system_prompt=!s:.500}...")
 
         # Get the LLM model
         if not self._llm:

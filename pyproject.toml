@@ -28,6 +28,7 @@ dependencies = [
 
 [project.scripts]
 consul = "consul.cli.main:main"
+consul-mcp-server = "consul.tools.server:main"
 
 [build-system]
 requires = ["hatchling"]

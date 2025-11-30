@@ -144,8 +144,8 @@ agent:
 # tools
 tools:
   include:
-    - local:find
-    - local:get_source_code
-    - local:save_to_file
-    - local:propose_new_code
-    - local:propose_code_edit
+    - local-mcp:find
+    - local-mcp:get_source_code
+    - local-mcp:save_to_file
+    - local-mcp:propose_new_code
+    - local-mcp:propose_code_edit

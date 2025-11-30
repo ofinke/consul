@@ -6,5 +6,8 @@ from pydantic import BaseModel
 class MCPConfig(BaseModel):
     """Definition of configuration for online MCP servers."""
 
-    url: str
+    command: str | None = None
+    args: list | None = None
+    url: str | None = None
     transport: str
+

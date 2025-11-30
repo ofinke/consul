@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -17,17 +16,6 @@ class ToolsRegistry(Registry):
         super().__init__()
         self.config: ToolConfig = config
 
-    @property
-    def local_mcp_server(self) -> dict[str, str | list[str]]:
-        """Return definition of the local MCP server."""
-        # Construct address to local MCP server
-        location = Path(__file__).parent / "server.py"
-        return {
-            "command": "python",
-            "args": [str(location)],
-            "transport": "stdio",
-        }
-
     def start_mcp_client(self) -> None:
         self.loaded_servers = self.load_server_configs(self.config.servers)
         self.mcp_client = MultiServerMCPClient(self.loaded_servers)
@@ -36,14 +24,11 @@ class ToolsRegistry(Registry):
         """Retrieves dictionary with MCP server connections based on server names."""
         server_configs = {}
         for server in server_names:
-            if server == "local":
-                server_configs[server] = self.local_mcp_server
-            else:
-                try:
-                    server_configs[server] = self._get_server_config(server)
-                except ValueError:
-                    logger.warning(f"Skipped MCP server '{server}' due to missing configuration.")
-                    continue
+            try:
+                server_configs[server] = self._get_server_config(server)
+            except ValueError:
+                logger.warning(f"Skipped MCP server '{server}' due to missing configuration.")
+                continue
             logger.debug(f"Loaded MCP server '{server}' configuration.")
 
         return server_configs
@@ -52,7 +37,7 @@ class ToolsRegistry(Registry):
         """Retrieves MCP server configuration from database."""
         handler = get_db_handler()
         server_config = handler.load_config(server_name)
-        return server_config.model_dump()
+        return server_config.model_dump(exclude_none=True)
 
     async def register_tools(self) -> None:
         """Registers prefiltered tools from all configured servers."""

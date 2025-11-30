@@ -163,5 +163,5 @@ tools:
   servers:
     - langchain-mcp
   include:
-    - local:find
-    - local:get_source_code
+    - local-mcp:find
+    - local-mcp:get_source_code

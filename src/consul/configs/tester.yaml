@@ -96,8 +96,8 @@ agent:
 # tools
 tools:
   include:
-    - local:find
-    - local:get_source_code
-    - local:propose_new_code
-    - local:propose_code_edit
-    - local:run_pytest
+    - local-mcp:find
+    - local-mcp:get_source_code
+    - local-mcp:propose_new_code
+    - local-mcp:propose_code_edit
+    - local-mcp:run_pytest
