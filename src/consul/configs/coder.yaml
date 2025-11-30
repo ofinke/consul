@@ -143,8 +143,6 @@ agent:
 
 # tools
 tools:
-  servers:
-    - local
   include:
     - local:find
     - local:get_source_code

@@ -161,7 +161,7 @@ agent:
 # tools
 tools:
   servers:
-    - local
+    - langchain-mcp
   include:
     - local:find
     - local:get_source_code

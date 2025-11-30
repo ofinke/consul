@@ -15,8 +15,6 @@ class LoggingHandler:
     Handles logging of all messages into consul database.
     """
 
-    emsg: str = "failed to retrieve"
-
     def __init__(self) -> None:
         """Usual init + start database handler."""
         self.handler = get_db_handler()

@@ -8,6 +8,9 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel, model_validator
 
+from consul.db.handler import get_db_handler
+from consul.db.tables import AppConfigTable
+
 
 class AvailableFlow(Enum):
     CHAT = "chat"
@@ -46,7 +49,6 @@ class ToolConfig(BaseModel):
      - exclude: opposite of the include.
     """
 
-    # TODO: Implement this so it's functional and get rid of AvailableTools.
     servers: list[str] | None = None
     include: list[str] | None = None
     exclude: list[str] | None = None
@@ -54,7 +56,7 @@ class ToolConfig(BaseModel):
     @model_validator(mode="after")
     def validate_servers(self) -> Self:
         """Add all server names from include/exclude in the 'servers' key."""
-        servers = self.servers
+        servers = self.servers if self.servers else []
         if self.include:
             servers.extend([row.split(":")[0] for row in self.include])
         if self.exclude:
@@ -103,7 +105,7 @@ class BaseFlowConfig(BaseModel):
     tags: list[str] = []
 
     # llm configuration
-    llm_name: str = "gpt-4.1"
+    llm_name: str = "gpt-5-chat"
     llm_params: LLMParameters = LLMParameters()
 
     # prompts:
@@ -116,6 +118,9 @@ class BaseAgentConfig(BaseFlowConfig):
 
     # tools
     tools: ToolConfig
+
+
+# TODO: Create a function which loads defaults.yaml into the database first time app is turned on
 
 
 @lru_cache(maxsize=100)
@@ -143,3 +148,27 @@ def get_flow_config(task: AvailableFlow) -> BaseFlowConfig:
     # return evaluated model
     used_model = config_mapping.get(task, BaseFlowConfig)
     return used_model.model_validate(data)
+
+
+def store_defaults(*, force_refresh: bool = False) -> None:
+    """Checks if database contains configurations defined in defaults.yaml and stores them in db if not."""
+    # Check if database table with configuration is empty
+    handler = get_db_handler()
+    configs = handler.load(AppConfigTable)
+    if configs and not force_refresh:
+        return
+
+    # Loads configuration from default yaml
+    try:
+        config_path = resources.files("consul.configs").joinpath("defaults.yaml")
+        with config_path.open("r", encoding="utf-8") as file:
+            data = yaml.safe_load(file)
+    except FileNotFoundError as e:
+        msg = f"Default config for Consul not found: {e!s}"
+        logger.error(msg)
+        raise FileNotFoundError(msg) from e
+
+    # Clears table and stores new values
+    handler.clear_table(AppConfigTable)
+    handler.store([AppConfigTable(**row) for row in data])
+    logger.success(f"Stored default Consul configuration into {len(data)} rows.")

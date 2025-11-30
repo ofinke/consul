@@ -98,7 +98,7 @@ class BaseFlow(ABC):
 
     # Common interface
     def get_llm(self) -> BaseChatModel:
-        # NOTE: make this better nad move it to utils. Add check on model
+        # NOTE: move this into registry in core.llm
         # first try litellm
         if "litellm" in settings.model_fields_set:
             logger.debug("Starting 'litellm' API connection.")
@@ -137,12 +137,12 @@ class BaseFlow(ABC):
         # Validate input based on input schema
         input_data["flow"] = self.flow_name.value
         validated_input = self.input_schema(**input_data)
-        logger.debug(f"Task '{self.config.name}' {validated_input=}")
+        logger.debug(f"Task '{self.config.name}' {validated_input=!s:.500}")
 
         # Build system prompt
         if not self._system_prompt:
             self._system_prompt = self.build_system_prompt()
-            logger.debug(f"Task '{self.config.name}' {self._system_prompt=}")
+            logger.debug(f"Task '{self.config.name}' {self._system_prompt=:.500}...")
 
         # Get the LLM model
         if not self._llm:
@@ -153,8 +153,8 @@ class BaseFlow(ABC):
         if not self._compiled_graph:
             self._graph = await self.build_graph()
             self._compiled_graph = self._graph if isinstance(self._graph, CompiledStateGraph) else self._graph.compile()
-            logger.debug(f"Task '{self.config.name}' graph edges: {self._compiled_graph.get_graph().edges}")
-            logger.debug(f"Task '{self.config.name}' graph nodes: {self._compiled_graph.get_graph().nodes}")
+            logger.debug(f"Task '{self.config.name}' graph edges: {self._compiled_graph.get_graph().edges!s:.500}...")
+            logger.debug(f"Task '{self.config.name}' graph nodes: {self._compiled_graph.get_graph().nodes!s:.500}...")
 
         return validated_input
 

@@ -1,0 +1,6 @@
+- name: langchain-mcp
+  validation_model: MCPConfig
+  configuration: 
+    url: https://docs.langchain.com/mcp
+    transport: streamable_http
+  comment: Langchain documentation MCP sever.

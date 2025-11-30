@@ -5,6 +5,7 @@ from consul.cli.commands import CommandProcessor
 from consul.cli.exceptions import CommandInterrupt
 from consul.cli.terminal import TerminalHandler, get_terminal_handler
 from consul.cli.utils.appargs import UserArgs, consul_user_args
+from consul.core.config import store_defaults
 from consul.flows.session import FlowSession
 
 
@@ -33,10 +34,8 @@ class ConsulInterface:
         logger.remove()
         logger.add(self.io.display_loguru_message, level=level, format="{message}")
 
-
         self.session = FlowSession(self.user_args.flow)
         self.commands = CommandProcessor(self.session)
-
 
     def start_interface(self) -> None:
         # Welcome message
@@ -98,6 +97,7 @@ class ConsulInterface:
 
 @consul_user_args
 def main(user_args: UserArgs) -> None:
+    store_defaults(force_refresh=user_args.cfg_reload)
     while True:
         cli = ConsulInterface(user_args)
         try:

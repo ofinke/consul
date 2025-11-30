@@ -8,8 +8,6 @@ from consul.tools.propose_code import propose_code_edit, propose_new_code
 from consul.tools.retrieve_code import get_source_code
 from consul.tools.tests import run_pytest
 
-mcp = FastMCP("local")
-
 # TODO: figure out basic method to registering tools using decorator? maybe use the old autodiscover method from
 # prompts? Otherwise this needs to be defined like a script
 
@@ -17,6 +15,7 @@ mcp = FastMCP("local")
 # that the raised exception is passed into the model. (makes sense only on input tho)
 
 # Register the tools
+mcp = FastMCP("local")
 mcp.tool()(propose_code_edit)
 mcp.tool()(propose_new_code)
 mcp.tool()(get_source_code)

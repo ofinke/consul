@@ -24,19 +24,17 @@ class FlowSession:
     cid: str
 
     # existing flows
-    # TODO: Creation of this class causes debug logger printing which I don't want, but should be solved by the
-    # flow registry hopefully
     available_flows: ClassVar[dict[AvailableFlow, BaseFlow]] = {
-        AvailableFlow.CHAT: ChatTask(AvailableFlow.CHAT),
-        AvailableFlow.CODER: LangReactFlow(AvailableFlow.CODER),
-        AvailableFlow.TESTER: LangReactFlow(AvailableFlow.TESTER),
-        AvailableFlow.ARCHITECT: LangReactFlow(AvailableFlow.ARCHITECT),
+        AvailableFlow.CHAT: ChatTask,
+        AvailableFlow.CODER: LangReactFlow,
+        AvailableFlow.TESTER: LangReactFlow,
+        AvailableFlow.ARCHITECT: LangReactFlow,
     }
 
     def __init__(self, flow: AvailableFlow) -> None:
         """Initialize with first flow and empty history."""
         self.chat_history = []
-        self.flow = self.available_flows[flow]
+        self.flow = self.available_flows[flow](flow)
         self.cid = str(uuid.uuid4())
 
     @property
@@ -53,7 +51,7 @@ class FlowSession:
     def change_flow(self, flow: AvailableFlow) -> None:
         """Change used flow."""
         logger.debug(f"Changing flow to '{flow.value}'")
-        self.flow = self.available_flows[flow]
+        self.flow = self.available_flows[flow](flow)
 
     def post_message(self, message: str) -> str:
         """Call flow with full history and new user message and returns the AI answer."""
@@ -66,7 +64,6 @@ class FlowSession:
             "messages": self.chat_history,
             "cid": self.cid,
             "callback": interface_callback,
-            # "flow": self.flow.value,
         }
 
         # Execute the flow

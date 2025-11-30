@@ -105,6 +105,35 @@ class MessageLogTable(BaseTable, table=True):
     )
 
 
+class AppConfigTable(BaseTable, table=True):
+    __tablename__ = "app_configuration"
+
+    name: str = Field(
+        max_length=64,
+        nullable=False,
+        unique=True,
+        index=True,
+        sa_column_kwargs={"comment": "Unique configuration name"},
+    )
+    validation_model: str = Field(
+        max_length=64,
+        nullable=False,
+        index=True,
+        sa_column_kwargs={"comment": "Name of the pydantic model for validation"},
+    )
+    configuration: dict[str, Any] = Field(
+        default_factory=dict,
+        nullable=False,
+        sa_type=JSON,
+        sa_column_kwargs={"comment": "Content of the configuration"},
+    )
+    comment: str = Field(
+        sa_type=Text,
+        nullable=True,
+        sa_column_kwargs={"comment": "Description of the configuration"},
+    )
+
+
 # class FlowConfigTable(BaseTable, table=False):
 #     """Preparation for implementing flows definitions into database."""
 
