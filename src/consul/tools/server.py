@@ -14,14 +14,27 @@ from consul.tools.tests import run_pytest
 # TODO: Tools have an input and output validation, when it fails, it raises exception inside consul, how can I handle
 # that the raised exception is passed into the model. (makes sense only on input tho)
 
-# Register the tools
-mcp = FastMCP("local")
-mcp.tool()(propose_code_edit)
-mcp.tool()(propose_new_code)
-mcp.tool()(get_source_code)
-mcp.tool()(save_to_file)
-mcp.tool()(find)
-mcp.tool()(run_pytest)
+TOOLS = {}
 
-# if __name__ == "__main__":
-mcp.run(transport="stdio")
+
+def register_tool() -> None:
+    pass
+
+
+def autodisover_tools() -> None:
+    pass
+
+
+def main() -> None:
+    mcp = FastMCP("local", log_level="CRITICAL")
+    mcp.tool()(propose_code_edit)
+    mcp.tool()(propose_new_code)
+    mcp.tool()(get_source_code)
+    mcp.tool()(save_to_file)
+    mcp.tool()(find)
+    mcp.tool()(run_pytest)
+    mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()
