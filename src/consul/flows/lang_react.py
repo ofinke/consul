@@ -6,9 +6,9 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 from loguru import logger
 
-from consul.core.config import AvailableFlow
+from consul.core.schemas import FlowConfig
 from consul.flows.base import BaseFlow, BaseGraphState
-from consul.flows.logging import LoggingHandler
+from consul.flows.log import LoggingHandler
 from consul.prompts.registry import get_prompt_registry
 from consul.tools.registry import get_tool_registry
 
@@ -56,9 +56,9 @@ class LangReactFlow(BaseFlow):
     more info at: "https://docs.langchain.com/oss/python/langchain/agents".
     """
 
-    def __init__(self, flow_name: AvailableFlow) -> None:
+    def __init__(self, flow_config: FlowConfig) -> None:
         """Same as BaseFlow init + prepare variable for tools."""
-        super().__init__(flow_name)
+        super().__init__(flow_config)
         self.tools_registry = get_tool_registry(self.config.tools)
 
     @property

@@ -4,7 +4,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from loguru import logger
 
 from consul.core.abc import Registry
-from consul.core.config import ToolConfig
+from consul.core.schemas import ToolConfig
 from consul.db.handler import get_db_handler
 
 
@@ -36,7 +36,7 @@ class ToolsRegistry(Registry):
     def _get_server_config(self, server_name: str) -> dict[str, str]:
         """Retrieves MCP server configuration from database."""
         handler = get_db_handler()
-        server_config = handler.load_config(server_name)
+        server_config = handler.load_config(name=server_name)[0]
         return server_config.model_dump(exclude_none=True)
 
     async def register_tools(self) -> None:

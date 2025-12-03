@@ -11,7 +11,7 @@ from langgraph.graph.state import CompiledStateGraph
 from loguru import logger
 from pydantic import BaseModel
 
-from consul.core.config import AvailableFlow, BaseFlowConfig, get_flow_config
+from consul.core.schemas import FlowConfig
 from consul.core.settings import settings
 
 
@@ -41,7 +41,7 @@ class BaseGraphState(BaseModel):
 class BaseFlow(ABC):
     """Abstract base class for all tasks."""
 
-    def __init__(self, flow_name: AvailableFlow) -> None:
+    def __init__(self, flow_config: FlowConfig) -> None:
         """
         Initialize the base flow for a task.
 
@@ -56,15 +56,11 @@ class BaseFlow(ABC):
             _llm (AzureChatOpenAI | None): The language model interface for LLM calls.
 
         """
-        self.flow_name: AvailableFlow = flow_name
+        self.config = flow_config
         self._system_prompt: list[ChatMessage] = []
         self._graph: StateGraph | None = None
         self._compiled_graph = None
         self._llm: AzureChatOpenAI | None = None
-
-    @property
-    def config(self) -> BaseFlowConfig:
-        return get_flow_config(self.flow_name)
 
     # Core abstractions - must implement
     @property
@@ -76,14 +72,6 @@ class BaseFlow(ABC):
     @abstractmethod
     def state_schema(self) -> BaseGraphState:
         """Schema used in the graph."""
-
-    # NOTE: The idea here is, that if I don't want to present some parts of the inner state to the user,
-    # I can define OutputSchema and the return of the .execute() method, I can validate date using output_schema.
-    # But I'm the user so I can do whatever I want. Keeping it here if I decide to return to it later.
-    # @property
-    # @abstractmethod
-    # def output_schema(self) -> BaseFlowOutput:
-    #     """Output schema. Use if you want to limit what is returned to the user."""
 
     @abstractmethod
     def build_system_prompt(self) -> list[ChatMessage]:
@@ -135,26 +123,28 @@ class BaseFlow(ABC):
 
         """
         # Validate input based on input schema
-        input_data["flow"] = self.flow_name.value
+        input_data["flow"] = self.config.flow_name
         validated_input = self.input_schema(**input_data)
-        logger.debug(f"Task '{self.config.name}' {validated_input=!s:.500}")
+        logger.debug(f"Task '{self.config.flow_name}' {validated_input=!s:.500}")
 
         # Build system prompt
         if not self._system_prompt:
             self._system_prompt = self.build_system_prompt()
-            logger.debug(f"Task '{self.config.name}' {self._system_prompt=!s:.500}...")
+            logger.debug(f"Task '{self.config.flow_name}' {self._system_prompt=!s:.500}...")
 
         # Get the LLM model
         if not self._llm:
             self._llm = self.get_llm()
-            logger.debug(f"Task '{self.config.name}' {self._llm=}")
+            logger.debug(f"Task '{self.config.flow_name}' {self._llm=}")
 
         # Get or build graph
         if not self._compiled_graph:
             self._graph = await self.build_graph()
             self._compiled_graph = self._graph if isinstance(self._graph, CompiledStateGraph) else self._graph.compile()
-            logger.debug(f"Task '{self.config.name}' graph edges: {self._compiled_graph.get_graph().edges!s:.500}...")
-            logger.debug(f"Task '{self.config.name}' graph nodes: {self._compiled_graph.get_graph().nodes!s:.500}...")
+            edges = self._compiled_graph.get_graph().edges
+            logger.debug(f"Task '{self.config.flow_name}' graph edges: {edges!s:.500}...")
+            nodes = self._compiled_graph.get_graph().nodes
+            logger.debug(f"Task '{self.config.flow_name}' graph nodes: {nodes!s:.500}...")
 
         return validated_input
 

@@ -1,18 +1,18 @@
 from langchain_core.messages import ChatMessage
 from langgraph.graph import StateGraph
 
-from consul.core.config import AvailableFlow
+from consul.core.schemas import FlowConfig
 from consul.flows.base import BaseFlow, BaseGraphState
-from consul.flows.logging import LoggingHandler
+from consul.flows.log import LoggingHandler
 from consul.prompts.registry import get_prompt_registry
 
 
 class ChatTask(BaseFlow):
     """Ask LLM a question."""
 
-    def __init__(self, flow_name: AvailableFlow) -> None:
+    def __init__(self, flow_config: FlowConfig) -> None:
         """Init including the logging handler."""
-        super().__init__(flow_name)
+        super().__init__(flow_config)
         self.logging = LoggingHandler()
 
     @property

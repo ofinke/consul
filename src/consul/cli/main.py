@@ -6,6 +6,7 @@ from consul.cli.exceptions import CommandInterrupt
 from consul.cli.terminal import TerminalHandler, get_terminal_handler
 from consul.cli.utils.appargs import UserArgs, consul_user_args
 from consul.core.config import store_defaults
+from consul.flows.registry import get_flow_config_registry
 from consul.flows.session import FlowSession
 
 
@@ -23,23 +24,14 @@ class ConsulInterface:
         self.user_args = user_args
         self.io = get_terminal_handler()
 
-        # Determine log level
-        if user_args.quiet:
-            level = "WARNING"
-        elif user_args.verbose:
-            level = "DEBUG"
-        else:
-            level = "INFO"
-
-        logger.remove()
-        logger.add(self.io.display_loguru_message, level=level, format="{message}")
-
-        self.session = FlowSession(self.user_args.flow)
+        self.session = FlowSession()
+        self.session.change_flow(user_args.flow)
         self.commands = CommandProcessor(self.session)
 
     def start_interface(self) -> None:
         # Welcome message
-        self.io.echo_intro([key.value for key in self.session.available_flows])
+        flow_registry = get_flow_config_registry()
+        self.io.echo_intro(flow_registry.get_all_keys())
         self.io.display_message(f"Command: Starting {self.session.str_flow_info}")
 
         # start main loop
@@ -97,6 +89,11 @@ class ConsulInterface:
 
 @consul_user_args
 def main(user_args: UserArgs) -> None:
+    """Main entrypoint of the Consul application."""
+    level = "DEBUG" if user_args.verbose else "INFO"
+    logger.remove()
+    logger.add(get_terminal_handler().display_loguru_message, level=level, format="{message}")
+
     store_defaults(force_refresh=user_args.cfg_reload)
     while True:
         cli = ConsulInterface(user_args)

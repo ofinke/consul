@@ -9,11 +9,12 @@ from sqlalchemy import func, select
 from consul.cli.exceptions import CommandInterrupt
 from consul.cli.terminal import get_terminal_handler
 from consul.cli.utils.save import save_memory
-from consul.core.config import AvailableFlow
 from consul.db.handler import get_db_handler
 from consul.db.tables import MessageLogTable
-from consul.flows.logging import LoggingHandler
+from consul.flows.log import LoggingHandler
 from consul.flows.session import FlowSession
+
+# TODO: Add a command /or to help list of all available flows.
 
 
 class CommandProcessor:
@@ -105,15 +106,8 @@ class CommandProcessor:
 
     def cmd_flow(self, args: list[str]) -> None:
         """Changes session flow while keeping history."""
-        name = "".join(args)
-        try:
-            run_this_flow = AvailableFlow(name)
-        except ValueError:
-            logger.warning(f"'{name}' not a name of existing flow, starting 'chat' flow")
-            run_this_flow = AvailableFlow("chat")
-        finally:
-            self.session.change_flow(run_this_flow)
-            self.io.display_message(f"Command: Starting {self.session.str_flow_info}")
+        self.session.change_flow("".join(args))
+        self.io.display_message(f"Command: Starting {self.session.str_flow_info}")
 
     def cmd_print(self, _: list[str]) -> None:
         """Save current history into a markdown file."""
@@ -228,7 +222,7 @@ class CommandProcessor:
 
         # Create the new history
         self.session.clear_history()
-        self.session.change_flow(AvailableFlow(conversation_data[0][2]))
+        self.session.change_flow(conversation_data[0][2])
         self.session.cid = cid
         new_history = []
         for row in conversation_data:

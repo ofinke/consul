@@ -6,10 +6,11 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
 
 from consul.cli.utils.callback import interface_callback
-from consul.core.config import AvailableFlow
 from consul.flows.base import BaseFlow
 from consul.flows.chat import ChatTask
 from consul.flows.lang_react import LangReactFlow
+from consul.flows.react import ReactAgentFlow
+from consul.flows.registry import get_flow_config_registry
 
 
 class FlowSession:
@@ -23,24 +24,21 @@ class FlowSession:
     flow: BaseFlow
     cid: str
 
-    # existing flows
-    available_flows: ClassVar[dict[AvailableFlow, BaseFlow]] = {
-        AvailableFlow.CHAT: ChatTask,
-        AvailableFlow.CODER: LangReactFlow,
-        AvailableFlow.TESTER: LangReactFlow,
-        AvailableFlow.ARCHITECT: LangReactFlow,
+    flow_types_map: ClassVar[dict[str, type[BaseFlow]]] = {
+        "ChatTask": ChatTask,
+        "LangReactFlow": LangReactFlow,
+        "ReactAgentFlow": ReactAgentFlow,
     }
 
-    def __init__(self, flow: AvailableFlow) -> None:
-        """Initialize with first flow and empty history."""
-        self.chat_history = []
-        self.flow = self.available_flows[flow](flow)
-        self.cid = str(uuid.uuid4())
+    def __init__(self) -> None:
+        """Initialize sessíon with empty history, new conversation_id and flow registry."""
+        self.registry = get_flow_config_registry()
+        self.clear_history()
 
     @property
     def str_flow_info(self) -> str:
         """Returns information about active flow."""
-        return f"flow '{self.flow.config.name}'; ver: {self.flow.config.version}; {self.flow.config.description}"
+        return f"flow '{self.flow.config.flow_name}'; ver: {self.flow.config.version}; {self.flow.config.description}"
 
     def clear_history(self) -> None:
         """Clear chat history and create a new conversation id."""
@@ -48,10 +46,22 @@ class FlowSession:
         self.chat_history = []
         self.cid = str(uuid.uuid4())
 
-    def change_flow(self, flow: AvailableFlow) -> None:
+    def change_flow(self, flow_name: str) -> None:
         """Change used flow."""
-        logger.debug(f"Changing flow to '{flow.value}'")
-        self.flow = self.available_flows[flow](flow)
+        # TODO: Move the logic of running default flow here, also add a default parameter into FlowConfig so user can
+        # set it up according their needs.
+        logger.debug(f"Changing flow to '{flow_name}'")
+        try:
+            flow_config = self.registry.get(flow_name)
+        except KeyError:
+            logger.warning(f"Couldn't find flow '{flow_name}', starting default flow 'chat'.")
+            flow_config = self.registry.get("chat")
+
+        self.flow = self.flow_types_map[flow_config.flow_type](flow_config)
+
+    def reload_flow(self, flow_name: str | None = None) -> None:
+        self.clear_history()
+        self.reload_flow(flow_name if flow_name else self.flow.config.flow_name)
 
     def post_message(self, message: str) -> str:
         """Call flow with full history and new user message and returns the AI answer."""

@@ -26,3 +26,7 @@ class Registry:
     def get_all[T](self) -> list[T]:
         """Returns all registered items as a list."""
         return list(self.entries.values())
+
+    def get_all_keys(self) -> list[str]:
+        """Return all available keys as a list."""
+        return list(self.entries.keys())

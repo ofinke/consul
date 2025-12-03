@@ -8,7 +8,7 @@ from sqlalchemy import update as sql_update
 from sqlalchemy.sql import Select
 from sqlmodel import Session, SQLModel, delete
 
-from consul.core.schemas import MCPConfig
+from consul.core.schemas import FlowConfig, MCPConfig
 from consul.core.settings import settings
 
 from .tables import AppConfigTable
@@ -19,6 +19,7 @@ class DBHandler:
 
     ConfigModelMap: ClassVar[dict[str | type[BaseModel]]] = {
         "MCPConfig": MCPConfig,
+        "FlowConfig": FlowConfig,
     }
 
     def __init__(self) -> None:
@@ -58,35 +59,51 @@ class DBHandler:
                 session.rollback()
                 raise
 
-    def load_config(self, name: str) -> BaseModel:
-        """Loads configuration from AppConfigTable and return it's validated value."""
+    def load_config(self, *, name: str | None = None, data_schema: str | None = None) -> list[BaseModel]:
+        """
+        Loads one or more configurations from AppConfigTable.
+
+        - If 'name' is provided → load a single configuration by name.
+        - If 'name' is not provided → 'data_schema' must be provided, loads all of that schema.
+        """
+        if not name and not data_schema:
+            msg = "Either 'name' or 'data_schema' must be provided."
+            logger.error(msg)
+            raise ValueError(msg)
+
         with Session(self.engine) as session:
             try:
-                stmt = Select(AppConfigTable).where(AppConfigTable.name == name)
-                result = session.exec(stmt).first()[0]
+                # Build query conditionally
+                if name:
+                    statement = Select(AppConfigTable).where(AppConfigTable.name == name)
+                else:
+                    statement = Select(AppConfigTable).where(AppConfigTable.validation_model == data_schema)
+                # TODO: session.exec(statement).all() returns tuple instead of just data, why?
+                results = [row[0] for row in session.exec(statement).all()]
             except Exception:
                 session.rollback()
                 raise
 
-        if result is None:
-            msg = f"Configuration with name '{name}' not found."
+        if not results:
+            msg = f"Didn't retrieve any configuration based on {name=} and {data_schema}"
             logger.error(msg)
             raise ValueError(msg)
 
-        model_cls = self.ConfigModelMap.get(result.validation_model)
+        # Resolve which validation model to use
+        model_cls = self.ConfigModelMap.get(results[0].validation_model)
         if model_cls is None:
-            msg = f"Validation model '{result.validation_model}' not found in ConfigModelMap."
+            msg = f"Validation model '{results[0].validation_model}' not found in ConfigModelMap."
             logger.error(msg)
             raise ValueError(msg)
 
-        return model_cls(**result.configuration)
+        return [model_cls(**r.configuration) for r in results]
 
     def update[T: BaseModel](self, model: type[T], filters: dict[str, object], update_values: dict[str, object]) -> int:
         """Update rows in the table that match given filters with provided values."""
         with Session(self.engine) as session:
             try:
-                stmt = sql_update(model).filter_by(**filters).values(**update_values)
-                result = session.exec(stmt)
+                statement = sql_update(model).filter_by(**filters).values(**update_values)
+                result = session.exec(statement)
                 session.commit()
             except Exception:
                 session.rollback()
@@ -98,8 +115,8 @@ class DBHandler:
         """Deletes all rows from the table corresponding to the given data_schema."""
         with Session(self.engine) as session:
             try:
-                stmt = delete(data_schema)
-                result = session.exec(stmt)
+                statement = delete(data_schema)
+                result = session.exec(statement)
                 session.commit()
             except Exception:
                 session.rollback()
