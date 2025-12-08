@@ -137,7 +137,7 @@ class CommandProcessor:
         self.session.chat_history = new_history
 
         # print the whole history and also log it into the database as a new conversation
-        fake_state = {"cid": self.session.cid, "flow": self.session.flow.flow_name.value, "messages": []}
+        fake_state = {"cid": self.session.cid, "flow": self.session.flow.config.flow_name, "messages": []}
         log_handler = LoggingHandler()
         for msg in new_history:
             if isinstance(msg, HumanMessage):
