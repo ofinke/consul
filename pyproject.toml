@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Ondřej Finke", email = "ondrej.finke@gmail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "langchain-ollama>=0.3.0",
     "langchain-openai>=0.3.27",
