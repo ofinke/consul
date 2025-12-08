@@ -2,9 +2,10 @@ from langchain_core.messages import ChatMessage
 from langgraph.graph import StateGraph
 
 from consul.core.schemas import FlowConfig
-from consul.flows.base import BaseFlow, BaseGraphState
-from consul.flows.log import LoggingHandler
 from consul.prompts.registry import get_prompt_registry
+
+from .base import BaseFlow, BaseGraphState
+from .log import LoggingHandler
 
 
 class ChatTask(BaseFlow):
