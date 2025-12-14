@@ -1,0 +1,23 @@
+- name: summary
+  validation_model: FlowConfig
+  comment: Summarizes previous conversation
+  configuration: 
+    flow_name: sum
+    flow_type: SummaryTask
+    description: "Summarizes previous conversation."
+    version: "1.0.0"
+    tags: 
+      - "llm"
+
+    # llm configuration
+    llm_name: "gpt-5-chat"
+    llm_params: 
+      temperature: 0
+      max_tokens: 512
+      timeout: 30
+
+    # prompts
+    prompt_history:
+      - side: system
+        text: |
+          The user will provide you with a transcript of conversation between AI and the user including tool calls. Your goal is to create a short summary focusing on description what was the first question (or problem) and how it was solved. Don't focus on formalities.

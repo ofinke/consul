@@ -6,11 +6,13 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from loguru import logger
 
 from consul.cli.utils.callback import interface_callback
-from consul.flows.base import BaseFlow
-from consul.flows.chat import ChatTask
-from consul.flows.lang_react import LangReactFlow
-from consul.flows.react import ReactAgentFlow
-from consul.flows.registry import get_flow_config_registry
+
+from .base import BaseFlow
+from .chat import ChatTask
+from .lang_react import LangReactFlow
+from .react import ReactAgentFlow
+from .registry import get_flow_config_registry
+from .summary import SummaryTask
 
 
 class FlowSession:
@@ -28,6 +30,7 @@ class FlowSession:
         "ChatTask": ChatTask,
         "LangReactFlow": LangReactFlow,
         "ReactAgentFlow": ReactAgentFlow,
+        "SummaryTask": SummaryTask,
     }
 
     def __init__(self) -> None:
@@ -48,8 +51,6 @@ class FlowSession:
 
     def change_flow(self, flow_name: str) -> None:
         """Change used flow."""
-        # TODO: Move the logic of running default flow here, also add a default parameter into FlowConfig so user can
-        # set it up according their needs.
         logger.debug(f"Changing flow to '{flow_name}'")
         try:
             flow_config = self.registry.get(flow_name)
@@ -58,6 +59,11 @@ class FlowSession:
             flow_config = self.registry.get("chat")
 
         self.flow = self.flow_types_map[flow_config.flow_type](flow_config)
+
+        # SummaryTask is a special case, where we don't want to store the result under same covnersation id as the
+        # original conversation, so in this case, we reset the conversation id.
+        if flow_config.flow_type == "SummaryTask":
+            self.cid = str(uuid.uuid4())
 
     def reload_flow(self, flow_name: str | None = None) -> None:
         self.clear_history()

@@ -17,7 +17,7 @@ class Registry:
     def get[T](self, name: str) -> T:
         """Returns registered value or raises exception if the value is not available."""
         try:
-            return self.entries.get(name)
+            return self.entries[name]
         except KeyError as e:
             msg = f"Registry '{self.__class__}' doesn't contain entry tied to '{name}'."
             logger.warning(msg)

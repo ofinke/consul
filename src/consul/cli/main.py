@@ -72,9 +72,9 @@ class ConsulInterface:
                 continue
 
             # Skip empty inputs
-            if not user_input.strip():
-                self.io.display_message("Command: Please enter a message")
-                continue
+            # if not user_input.strip():
+            #     self.io.display_message("Command: Please enter a message")
+            #     continue
 
             # Run the flow
             self.io.start_spinner()

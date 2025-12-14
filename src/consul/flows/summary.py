@@ -1,6 +1,4 @@
-from collections.abc import Sequence
-
-from langchain_core.messages import AIMessage, BaseMessage, ChatMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, ChatMessage, HumanMessage, ToolMessage
 from langgraph.graph import StateGraph
 from loguru import logger
 
@@ -59,13 +57,13 @@ class SummaryTask(BaseFlow):
             text = ""
             for message in state.messages:
                 if isinstance(message, HumanMessage):
-                    text += f"==== Human Message ====\n```text{message.text}```\n\n"
+                    text += f"==== Human Message ====\n<p>\n{message.text}\n</p>\n\n"
                     continue
                 if isinstance(message, AIMessage):
-                    text += f"==== AI Message ====\n```text{message.text}```\n\n"
+                    text += f"==== AI Message ====\n<p>\n{message.text}\n</p>\n\n"
                     continue
                 if isinstance(message, ToolMessage):
-                    text += f"==== Tool Reply ====\n```text{message.text}```\n\n"
+                    text += f"==== Tool Reply ====\n<p>\n{message.text}\n</p>\n\n"
                     continue
 
                 logger.warning(f"Unknown messages type: {type(message)} occured.")
