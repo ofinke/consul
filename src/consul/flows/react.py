@@ -6,18 +6,26 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from consul.core.config.flows import AvailableFlow
-from consul.core.config.prompts import PROMPT_FORMAT_MAPPING
-from consul.core.config.tools import TOOL_MAPPING
+from consul.core.schemas import FlowConfig
 from consul.flows.base import BaseFlow, BaseGraphState
+from consul.flows.log import LoggingHandler
+from consul.prompts.registry import get_prompt_registry
+from consul.tools.registry import get_tool_registry
+
+# BUG: Currently tools are borked because the tool_registry needs .register_tools() method execution which is
+# async and should be executed in the same loop as the whole agent runtime and I'm too lazy to figure it now as I
+# don't really use this implementation anymore.
 
 
 class ReactAgentFlow(BaseFlow):
     """Base class for agent tasks with tool support."""
 
-    def __init__(self, flow_name: AvailableFlow) -> None:
-        super().__init__(flow_name)
+    def __init__(self, flow_config: FlowConfig) -> None:
+        """Same as BaseFlow init + prepare variable for tools."""
+        super().__init__(flow_config)
         self._tools_by_name: dict[str, BaseTool] = {}
+        self.logging = LoggingHandler()
+        self.tools_registry = get_tool_registry(self.config.tools)
 
     @property
     def input_schema(self) -> BaseGraphState:
@@ -27,20 +35,16 @@ class ReactAgentFlow(BaseFlow):
     def state_schema(self) -> BaseGraphState:
         return BaseGraphState
 
-    @property
-    def output_schema(self) -> BaseGraphState:
-        return BaseGraphState
-
     def get_tools(self) -> list[BaseTool]:
         """Return list of tools available to the agent."""
-        return [TOOL_MAPPING[tool] for tool in self.config.tools]
+        return self.tools_registry.get_all()
 
     def build_system_prompt(self) -> list[ChatMessage]:
         """Builds system prompt from config."""
         return [
             ChatMessage(
                 role=turn.side,
-                content=turn.text.format_map(PROMPT_FORMAT_MAPPING),
+                content=turn.text.format_map(get_prompt_registry().entries),
             )
             for turn in self.config.prompt_history
         ]
@@ -51,7 +55,7 @@ class ReactAgentFlow(BaseFlow):
         tools = self.get_tools()
         return self._llm.bind_tools(tools)
 
-    def build_graph(self) -> StateGraph:
+    async def build_graph(self) -> StateGraph:
         """Build the agent graph with model and tool nodes."""
         # Setup tools
         tools = self.get_tools()
@@ -61,13 +65,16 @@ class ReactAgentFlow(BaseFlow):
         graph = StateGraph(self.state_schema)
 
         # node definitions
-        def llm_node(state: BaseGraphState) -> BaseGraphState:
-            """Calls LLM with message history and appends LLM response."""
+        async def llm_node(state: BaseGraphState) -> BaseGraphState:
+            """Logs user message, calls LLM, logs LLM answer, and appends LLM response to chat history."""
             full_history = [*self._system_prompt, *state.messages]
-            response = self._llm.invoke(full_history)
-            return self.state_schema(messages=[*state.messages, response])
+            self.logging.log_message(self.state_schema(messages=full_history, **state.model_dump(exclude="messages")))
+            response = await self._llm.ainvoke(full_history)
+            new_state = self.state_schema(messages=[*state.messages, response], **state.model_dump(exclude="messages"))
+            self.logging.log_message(new_state)
+            return new_state
 
-        def tool_node(state: BaseGraphState) -> BaseGraphState:
+        async def tool_node(state: BaseGraphState) -> BaseGraphState:
             """Checks if last message contains tool call and executes it."""
             last_message = state.messages[-1]
             if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
@@ -78,7 +85,7 @@ class ReactAgentFlow(BaseFlow):
                 logger.debug(
                     f"Task '{self.config.name}' executing tool call '{tool_call['name']}' with args={str(tool_call['args'])[:25]!r}..."  # noqa: E501
                 )
-                tool_result = self._tools_by_name[tool_call["name"]].invoke(tool_call["args"])
+                tool_result = await self._tools_by_name[tool_call["name"]].ainvoke(tool_call["args"])
                 tool_outputs.append(
                     ToolMessage(
                         content=json.dumps(tool_result) if not isinstance(tool_result, str) else tool_result,
@@ -86,8 +93,8 @@ class ReactAgentFlow(BaseFlow):
                         tool_call_id=tool_call["id"],
                     )
                 )
-                logger.success(f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].content[:25]!r}...'")
-            return self.state_schema(messages=[*state.messages, *tool_outputs])
+                logger.success(f"Tool '{tool_call['name']}' responded with: '{tool_outputs[-1].text[:25]!r}...'")
+            return self.state_schema(messages=[*state.messages, *tool_outputs], **state.model_dump(exclude="messages"))
 
         def should_continue(state: BaseGraphState) -> str:
             """Determine if agent should continue or end."""

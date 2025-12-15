@@ -6,12 +6,11 @@ readme = "README.md"
 authors = [
     { name = "Ondřej Finke", email = "ondrej.finke@gmail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
-    "langchain>=0.3.21",
     "langchain-ollama>=0.3.0",
     "langchain-openai>=0.3.27",
-    "langgraph>=0.3.18",
+    "langgraph>=1.0.3",
     "loguru>=0.7.3",
     "pydantic-settings>=2.10.1",
     "click>=8.1.8",
@@ -22,10 +21,14 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.9",
     "unidiff>=0.7.5",
     "pathspec>=0.12.1",
+    "sqlalchemy>=2.0.41",
+    "sqlmodel>=0.0.27",
+    "langchain>=1.1.0",
 ]
 
 [project.scripts]
 consul = "consul.cli.main:main"
+consul-mcp-server = "consul.tools.server:main"
 
 [build-system]
 requires = ["hatchling"]

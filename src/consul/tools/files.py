@@ -2,11 +2,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from langchain_core.tools import tool
 from loguru import logger
 
 
-@tool
 def save_to_file(file_path: str, content: str) -> dict[str, Any]:
     """
     Saves the content to a new file, creating directories if needed. Cannot overwrite already existing files.

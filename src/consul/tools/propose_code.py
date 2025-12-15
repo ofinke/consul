@@ -5,11 +5,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from langchain_core.tools import tool
 from loguru import logger
 from unidiff import PatchSet
 
-from consul.cli.utils.text import TerminalHandler
+from consul.cli.terminal import get_terminal_handler
 
 
 def _ensure_temp_dir() -> Path:
@@ -37,10 +36,11 @@ def _show_diff_in_vscode(original_file: Path, modified_file: Path) -> tuple[bool
 
 def _get_user_approval() -> tuple[bool, str]:
     """Get user approval for changes."""
-    choice = TerminalHandler.prompt_user_input("→ Accept suggested changes? [y/N]: ")
+    io = get_terminal_handler()
+    choice = io.prompt_user_input("→ Accept suggested changes? [y/N]: ")
     if choice == "y":
         return True, ""
-    reason = TerminalHandler.prompt_user_input("→ Comment why changes were rejected: ")
+    reason = io.prompt_user_input("→ Comment why changes were rejected: ")
     return False, reason
 
 
@@ -129,7 +129,6 @@ def _apply_patch(original_content: str, patch: str) -> str:
     return "".join(patched_lines)
 
 
-@tool
 def propose_code_edit(file_path: str, patch: str) -> dict[str, str]:
     """
     Apply a patch to an existing file using unified diff format with a valid hunk header.
@@ -194,7 +193,6 @@ def propose_code_edit(file_path: str, patch: str) -> dict[str, str]:
             modified_file.unlink(missing_ok=True)
 
 
-@tool
 def propose_new_code(file_path: str, content: str) -> dict[str, str]:
     """
     Propose new code into a new file.

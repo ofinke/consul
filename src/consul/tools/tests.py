@@ -1,9 +1,6 @@
 import subprocess
 
-from langchain_core.tools import tool
 
-
-@tool
 def run_pytest(
     path: str = ".",
     test_name: str | None = None,

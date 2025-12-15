@@ -2,10 +2,7 @@ from datetime import datetime
 
 import pytz
 
-from consul.core.config.prompts import register_prompt_format
 
-
-@register_prompt_format
 def get_current_datetime() -> str:
     # TODO: move timezone into config
     now = datetime.now(pytz.timezone("Europe/Prague"))

@@ -1,0 +1,13 @@
+- name: local-mcp
+  validation_model: MCPConfig
+  configuration: 
+    command: consul-mcp-server
+    args: []
+    transport: stdio
+  comment: Consul's local MCP server.
+- name: langchain-mcp
+  validation_model: MCPConfig
+  configuration: 
+    url: https://docs.langchain.com/mcp
+    transport: streamable_http
+  comment: Langchain documentation MCP sever.

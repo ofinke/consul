@@ -2,8 +2,6 @@ import fnmatch
 import os
 from pathlib import Path
 
-from consul.core.config.prompts import register_prompt_format
-
 HARDCODED_IGNORES: list[str] = [".git", ".DS_Store", "__pycache__", ".venv", ".env"]
 
 
@@ -52,8 +50,7 @@ def _matches_any(patterns: list[str], rel_path: str) -> bool:
     return False
 
 
-@register_prompt_format
-def get_project_tree() -> str:
+def get_project_tree(max_depth: int | None = 3) -> str:
     """
     Generate the folder tree structure from the current working directory,
     respecting .gitignore files and hardcoded ignore patterns.
@@ -62,13 +59,15 @@ def get_project_tree() -> str:
         str: The string representation of the folder tree.
 
     """
-    root_path: Path = Path.cwd()
+    root_path = Path.cwd()
+    scanned_depth = 0
 
     def tree(
         dir_path: Path,
         prefix: str = "",
         accumulated_patterns: list[str] | None = None,
         rel_path: str = "",
+        depth: int = 0,
     ) -> list[str]:
         """
         Recursively traverse directories and build the tree, with ignore patterns.
@@ -78,11 +77,18 @@ def get_project_tree() -> str:
             prefix (str): Current indentation prefix for pretty-printing.
             accumulated_patterns (list[str]): Patterns inherited from parents.
             rel_path (str): Relative path from root directory.
+            depth (int): desired depth of the tree.
 
         Returns:
             list[str]: Tree lines for this directory.
 
         """
+        nonlocal scanned_depth
+        scanned_depth = max(scanned_depth, depth)
+
+        if max_depth is not None and depth >= max_depth:
+            return []  # stop scanning deeper
+
         if accumulated_patterns is None:
             accumulated_patterns = []
         local_gitignore = dir_path / ".gitignore"
@@ -94,10 +100,7 @@ def get_project_tree() -> str:
         except PermissionError:
             return []
 
-        # If at the root, skip .gitignore itself
-        entries = [
-            e for e in entries if not (rel_path == "" and e.name == ".gitignore")
-        ]
+        entries = [e for e in entries if not (rel_path == "" and e.name == ".gitignore")]
 
         kept_entries: list[Path] = []
         for entry in entries:
@@ -112,9 +115,13 @@ def get_project_tree() -> str:
             if entry.is_dir():
                 extension = "    " if idx == len(kept_entries) - 1 else "│   "
                 new_rel_path = str(Path(rel_path) / entry.name).replace(os.sep, "/")
-                lines += tree(entry, prefix + extension, patterns, new_rel_path)
+                lines += tree(entry, prefix + extension, patterns, new_rel_path, depth + 1)
         return lines
 
     result: list[str] = [root_path.name + "/"]
     result += tree(root_path)
     return "\n".join(result)
+
+
+if __name__ == "__main__":
+    print(get_project_tree())

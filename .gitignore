@@ -20,3 +20,8 @@ wheels/
 /.tmp
 /tmp
 /temp
+
+*.db
+
+# Ignore 'private' configurations                                                
+src/consul/configs/*private*.yaml      
