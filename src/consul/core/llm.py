@@ -1,8 +1,6 @@
 # TODO: Move here the model creation registry
 import functools
 
-from consul.core.abc import Registry
-
 # TODO: Create something like ModelContext (different word then context) which defines what type of model it is
 # reasoning / not-reasoning and which provider it can use. ModelScope?
 # example:
@@ -18,10 +16,14 @@ from consul.core.abc import Registry
 # }
 
 
-class LLMRegistry(Registry):
-    pass
+class LLMFactory:
+    def __init__(self):
+        pass
+
+    def get_model(self):
+        pass
 
 
 @functools.cache
-def get_prompt_registry() -> LLMRegistry:
-    return LLMRegistry()
+def get_model_connection() -> LLMFactory:
+    return LLMFactory().get_model()

@@ -44,8 +44,10 @@ include = [
 
 [dependency-groups]
 dev = [
+    "ipykernel>=7.1.0",
     "pytest>=8.4.1",
     "ruff>=0.11.2",
+    "ty>=0.0.3",
 ]
 
 
