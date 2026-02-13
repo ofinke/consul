@@ -1,5 +1,7 @@
 """MCP server for local Consul tools."""
 
+import argparse
+
 from mcp.server.fastmcp import FastMCP
 
 from consul.tools.files import save_to_file
@@ -26,7 +28,16 @@ def autodisover_tools() -> None:
 
 
 def main() -> None:
-    mcp = FastMCP("local", log_level="CRITICAL")
+    parser = argparse.ArgumentParser(description="MCP server for local Consul tools")
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="CRITICAL",
+        help="Set the logging level (default: CRITICAL)",
+    )
+    args = parser.parse_args()
+
+    mcp = FastMCP("local", log_level=args.log_level)
     mcp.tool()(propose_code_edit)
     mcp.tool()(propose_new_code)
     mcp.tool()(get_source_code)

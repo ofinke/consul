@@ -2,7 +2,7 @@
   validation_model: MCPConfig
   configuration: 
     command: consul-mcp-server
-    args: []
+    args: ["--log-level", "CRITICAL"]
     transport: stdio
   comment: Consul's local MCP server.
 - name: langchain-mcp
