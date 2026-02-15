@@ -11,6 +11,8 @@ from consul.db.handler import get_db_handler
 class ToolsRegistry(Registry):
     """Instance based registry of tools from multiple MCP servers."""
 
+    _server_prefix: bool = True
+
     def __init__(self, config: ToolConfig) -> None:
         """Initilize tools registry based on desired tools defined in ToolConfig."""
         super().__init__()
@@ -18,7 +20,9 @@ class ToolsRegistry(Registry):
 
     def start_mcp_client(self) -> None:
         self.loaded_servers = self.load_server_configs(self.config.servers)
-        self.mcp_client = MultiServerMCPClient(self.loaded_servers)
+        # NOTE: I want to add tool_name_prefix=True parameter to the client, but this probably breaks the include_dict
+        # and exclude_dict filtering!
+        self.mcp_client = MultiServerMCPClient(self.loaded_servers, tool_name_prefix=self._server_prefix)
 
     def load_server_configs(self, server_names: list[str]) -> list[dict[str, Any]]:
         """Retrieves dictionary with MCP server connections based on server names."""
@@ -26,8 +30,8 @@ class ToolsRegistry(Registry):
         for server in server_names:
             try:
                 server_configs[server] = self._get_server_config(server)
-            except ValueError:
-                logger.warning(f"Skipped MCP server '{server}' due to missing configuration.")
+            except ValueError as e:
+                logger.warning(f"Skipped MCP server '{server}' due to missing configuration: {e!s}")
                 continue
             logger.debug(f"Loaded MCP server '{server}' configuration.")
 
@@ -45,8 +49,8 @@ class ToolsRegistry(Registry):
         # For each server, retrieve available tools and if necessary, filter them based on config include/exclude keys
         for server in self.loaded_servers:
             server_tools = await self.mcp_client.get_tools(server_name=server)
-            include = set(self.config.include_dict.get(server, []))
-            exclude = set(self.config.exclude_dict.get(server, []))
+            include = set(self.config.include_dict(server_prefix=self._server_prefix).get(server, []))
+            exclude = set(self.config.exclude_dict(server_prefix=self._server_prefix).get(server, []))
             all_tool_names = {tool.name for tool in server_tools}
             logger.debug(f"Retrieved MCP server '{server}' tools: {all_tool_names=}")
 

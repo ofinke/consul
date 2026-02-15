@@ -9,6 +9,7 @@
             "console": "integratedTerminal",
             "args": ["-v", "-f", "coder"],
             "justMyCode": false,
+            "envFile": "${workspaceFolder}/.env",
         }
     ]
 }

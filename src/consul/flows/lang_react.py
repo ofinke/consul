@@ -43,6 +43,9 @@ class InterfaceMiddleware(AgentMiddleware):
         """Log latest message after model call."""
         # The state need to be copied, otherwise the changes translate into the state and breaks down the flow later.
         self.logger.log_message(state)
+        # inform about tool calls when verbose
+        for tool_call in state["messages"][-1].tool_calls if state["messages"] else []:
+            logger.debug(f"Tool '{tool_call.get('name')}' called with input: {tool_call.get('args')}")
         # execute callback
         callback = state.get("callback")
         if callable(callback):

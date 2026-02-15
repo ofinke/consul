@@ -26,7 +26,7 @@ def consul_user_args(func: Callable[[UserArgs], None]) -> Callable[..., None]:
     @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
     @click.option("--flow", "-f", type=str, default="chat", help="Select flow type")
     @click.option("--message", "-m", type=str, default="", help="Write initial message for the flow.")
-    @click.option("--cfg-reload", is_flag=True, help="Reloads configuration from defaults.yaml file.")
+    @click.option("--cfg-reload", is_flag=True, help="Reloads configuration from yaml files in configs folder.")
     def wrapper(*, verbose: bool, flow: str, message: str, cfg_reload: bool) -> None:
         args = UserArgs(verbose=verbose, flow=flow, message=message, cfg_reload=cfg_reload)
         func(args)
