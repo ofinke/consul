@@ -17,6 +17,7 @@ from .tables import AppConfigTable
 class DBHandler:
     """Database Handler for Consul operations."""
 
+    # TODO: Replace this using __subclasses__ where all config models inherit from a common base class
     ConfigModelMap: ClassVar[dict[str | type[BaseModel]]] = {
         "MCPConfig": MCPConfig,
         "FlowConfig": FlowConfig,

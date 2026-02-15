@@ -1,5 +1,3 @@
-# TODO: Move schemas from .core.config.py
-
 from collections import defaultdict
 from typing import Self
 
@@ -9,9 +7,13 @@ from pydantic import BaseModel, model_validator
 class MCPConfig(BaseModel):
     """Definition of configuration for MCP servers."""
 
+    # local
     command: str | None = None
     args: list | None = None
+    # remote
     url: str | None = None
+    headers: dict | None = None
+    # transport type
     transport: str
 
 
@@ -40,7 +42,8 @@ class ToolConfig(BaseModel):
     """
     Configuration of default tools available to the agent.
     Expected functionality:
-     - servers: list of MCP servers names to use. Server params are then loaded from database.
+     - servers: list of MCP servers names to use. Server params are then loaded from database. If only servers
+                are defined, all tools from those servers are used.
      - include: tools to include from specific servers: 'local:find' includes find tool from local server.
      - exclude: opposite of the include.
     """
@@ -52,7 +55,7 @@ class ToolConfig(BaseModel):
     @model_validator(mode="after")
     def validate_servers(self) -> Self:
         """Add all server names from include/exclude in the 'servers' key."""
-        servers = self.servers if self.servers else []
+        servers = self.servers or []
         if self.include:
             servers.extend([row.split(":")[0] for row in self.include])
         if self.exclude:
@@ -60,8 +63,7 @@ class ToolConfig(BaseModel):
         self.servers = list(set(servers))
         return self
 
-    @property
-    def include_dict(self) -> dict[str, list[str]]:
+    def include_dict(self, *, server_prefix: bool = False) -> dict[str, list[str]]:
         """Returns include key as a dict in the format {"server_name": ["tool1", "tool2"]}."""
         if not self.include:
             return {}
@@ -71,11 +73,10 @@ class ToolConfig(BaseModel):
             if ":" not in tool:
                 continue  # skip invalid entries
             name, value = tool.split(":", 1)  # split only on first colon
-            result[name].append(value)
+            result[name].append(f"{name}_{value}" if server_prefix else value)
         return dict(result)
 
-    @property
-    def exclude_dict(self) -> dict[str, list[str]]:
+    def exclude_dict(self, *, server_prefix: bool = False) -> dict[str, list[str]]:
         """Returns exclude key as a dict in the format {"server_name": ["tool1", "tool2"]}."""
         if not self.exclude:
             return {}
@@ -85,7 +86,7 @@ class ToolConfig(BaseModel):
             if ":" not in tool:
                 continue  # skip invalid entries
             name, value = tool.split(":", 1)  # split only on first colon
-            result[name].append(value)
+            result[name].append(f"{name}_{value}" if server_prefix else value)
         return dict(result)
 
 
