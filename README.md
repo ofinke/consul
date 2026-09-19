@@ -1,3 +1,5 @@
+This project is now **archived**. As there is more then enough agentic harnesses to choose from, there is no need to develop my own. From my experience, I would suggest [opencode](https://opencode.ai/).
+
 ![Logo](content/ascii_logo.png)
 
 # Consul 🧑‍🔬
